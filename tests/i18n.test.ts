@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { languageDir, LANGUAGES, setLanguage, t, tDynamic } from '../src/renderer/src/i18n'
 import { en } from '../src/renderer/src/i18n/en'
 import { ur } from '../src/renderer/src/i18n/ur'
+import { TEMPLATES } from '../src/main/automation/templates'
 import { DEFAULT_SETTINGS } from '../src/shared/defaults'
 
 type Tree = { [k: string]: string | Tree }
@@ -42,6 +43,21 @@ describe('Urdu translation', () => {
     expect(UR['automation.urlHint']).toContain('localhost')
     expect(UR['automation.urlHint']).toMatch(/ری ڈائریکٹ/)
     expect(UR['automation.noPermissions']).toMatch(/مقامی سروس/)
+  })
+
+  it('has every workflow template, with English matching the main process', () => {
+    for (const tpl of TEMPLATES)
+      for (const field of ['name', 'description', 'howTo'] as const) {
+        const key = `automation.tpl.${tpl.id}.${field}`
+        expect(EN[key], key).toBe(tpl[field])
+        expect(UR[key], key).toMatch(/[؀-ۿ]/)
+      }
+    const ids = new Set(
+      Object.keys(EN)
+        .filter((k) => k.startsWith('automation.tpl.'))
+        .map((k) => k.split('.')[2])
+    )
+    expect([...ids].sort()).toEqual(TEMPLATES.map((t) => t.id).sort())
   })
 
   it('has exactly the same keys as English', () => {

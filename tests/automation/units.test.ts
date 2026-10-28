@@ -31,6 +31,7 @@ import {
   templateVariables
 } from '../../src/main/automation/template'
 import { applyDefaults, TEMPLATES } from '../../src/main/automation/templates'
+import { zTemplateDefaults } from '../../src/main/validation'
 import { DEFAULT_AUTOMATION_SETTINGS } from '../../src/shared/automation'
 import { wf } from './helpers'
 
@@ -298,5 +299,32 @@ describe('schema, templates and packs', () => {
       webhookEnabled: false,
       runInTray: false
     })
+  })
+})
+
+describe('template defaults (IPC input)', () => {
+  it('accepts any subset of capabilities — a user may only have a chat key', () => {
+    expect(zTemplateDefaults.safeParse({}).success).toBe(true)
+    expect(
+      zTemplateDefaults.safeParse({ llm: { providerId: 'openai', model: 'gpt-4o-mini' } }).success
+    ).toBe(true)
+    expect(
+      zTemplateDefaults.safeParse({
+        llm: { providerId: 'openai', model: 'gpt-4o-mini' },
+        tts: { providerId: 'openai', model: 'tts-1', voice: 'alloy' }
+      }).success
+    ).toBe(true)
+  })
+
+  it('still rejects unknown capabilities and malformed entries', () => {
+    expect(zTemplateDefaults.safeParse({ shell: { providerId: 'x', model: 'y' } }).success).toBe(
+      false
+    )
+    expect(
+      zTemplateDefaults.safeParse({ llm: { providerId: 'Bad Id!', model: 'm' } }).success
+    ).toBe(false)
+    expect(zTemplateDefaults.safeParse({ llm: { providerId: 'openai', model: '' } }).success).toBe(
+      false
+    )
   })
 })

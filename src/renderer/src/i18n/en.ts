@@ -676,6 +676,40 @@ export const en = {
     batch_cancelled: 'Cancelled',
     batch_completed: 'Completed',
     batch_capped: 'Stopped at cap',
+    // Template texts by template id (the English must match src/main/automation/templates.ts).
+    tpl: {
+      'blog-post': {
+        name: 'Blog post plus cover image',
+        description:
+          'Writes an outline and a full Markdown blog post about a topic, then generates a matching cover image.',
+        howTo:
+          'Click Run and type the topic as the input. The post is saved in your output folder under automation/blog.'
+      },
+      'bulk-images-csv': {
+        name: 'Bulk image generation from CSV',
+        description: 'Generates one image per row of a CSV file (or per line of a TXT file).',
+        howTo:
+          'Go to Automation › Batch, choose this workflow and a CSV with a "prompt" column (or a TXT file with one prompt per line). Each row becomes {{input}}.'
+      },
+      'transcribe-folder': {
+        name: 'Transcribe a folder of audio files',
+        description: 'Watches a folder and transcribes every new audio file to a .txt file.',
+        howTo:
+          'Choose the folder to watch in the trigger and enable the workflow. New .mp3/.wav/.m4a files are transcribed into automation/transcripts. To transcribe files already in the folder, start a Batch with source "Folder".'
+      },
+      'translate-files': {
+        name: 'Translate text files',
+        description: 'Translates each text file in a folder and saves the translation.',
+        howTo:
+          'Edit the target language in the "Translate" step, then start a Batch with source "Folder" and pattern *.txt;*.md. Translations are saved in automation/translations.'
+      },
+      'daily-summary': {
+        name: 'Daily summary of a text file',
+        description: 'Every day, summarises a notes/log file and saves the summary.',
+        howTo:
+          'Set the file to summarise in the "Read file" step (relative paths are inside your output folder’s automation folder), choose the time in the trigger and enable the workflow. Keep AI Hub running (or in the tray).'
+      }
+    },
     viewRuns: 'View runs'
   },
   license: {

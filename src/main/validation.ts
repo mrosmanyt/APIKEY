@@ -221,3 +221,13 @@ export const zPrompt = z.object({
   createdAt: z.number(),
   updatedAt: z.number()
 })
+
+/** Defaults for the capabilities the user has set up; any subset (zod v4 records are exhaustive). */
+export const zTemplateDefaults = z.partialRecord(
+  z.enum(['llm', 'image', 'video', 'tts', 'stt']),
+  z.object({
+    providerId: zProviderId,
+    model: z.string().min(1).max(300),
+    voice: z.string().max(300).optional()
+  })
+)

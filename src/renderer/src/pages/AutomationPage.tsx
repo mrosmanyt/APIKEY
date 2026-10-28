@@ -14,11 +14,18 @@ import { WorkflowEditor } from './automation/WorkflowEditor'
 
 type Tab = 'workflows' | 'runs' | 'batch'
 
+/** A template's text in the UI language, falling back to the English sent by the main process. */
+function templateText(tpl: WorkflowTemplate, field: 'name' | 'description' | 'howTo'): string {
+  const key = `automation.tpl.${tpl.id}.${field}`
+  const text = tDynamic(key)
+  return text === key ? tpl[field] : text
+}
+
 function TemplatePicker({
   onPick,
   onClose
 }: {
-  onPick: (id: string) => void
+  onPick: (tpl: WorkflowTemplate) => void
   onClose: () => void
 }) {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([])
@@ -30,10 +37,16 @@ function TemplatePicker({
       <div className="grid gap-3 sm:grid-cols-2">
         {templates.map((tpl) => (
           <div key={tpl.id} className="card flex flex-col p-4" data-testid={`template-${tpl.id}`}>
-            <h3 className="font-semibold">{tpl.name}</h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{tpl.description}</p>
-            <p className="mt-2 flex-1 text-xs text-slate-500">{tpl.howTo}</p>
-            <button className="btn-primary btn-sm mt-3 w-fit" onClick={() => onPick(tpl.id)}>
+            <h3 className="font-semibold" dir="auto">
+              {templateText(tpl, 'name')}
+            </h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300" dir="auto">
+              {templateText(tpl, 'description')}
+            </p>
+            <p className="mt-2 flex-1 text-xs text-slate-500" dir="auto">
+              {templateText(tpl, 'howTo')}
+            </p>
+            <button className="btn-primary btn-sm mt-3 w-fit" onClick={() => onPick(tpl)}>
               {t('automation.useTemplate')}
             </button>
           </div>
@@ -94,9 +107,18 @@ export function AutomationPage() {
     return d
   }
 
-  const fromTemplate = async (id: string) => {
+  const fromTemplate = async (tpl: WorkflowTemplate) => {
     try {
-      const wf = await call(api().automation.createFromTemplate(id, templateDefaults()))
+      let wf = await call(api().automation.createFromTemplate(tpl.id, templateDefaults()))
+      // Name and describe it in the UI language (steps and prompts stay as in the template).
+      if (settings?.language && settings.language !== 'en')
+        wf = await call(
+          api().automation.saveWorkflow({
+            ...wf,
+            name: templateText(tpl, 'name'),
+            description: templateText(tpl, 'description')
+          })
+        )
       setPicking(false)
       setDraftNew(undefined)
       await load()
@@ -260,7 +282,10 @@ export function AutomationPage() {
         />
       )}
       {picking && (
-        <TemplatePicker onPick={(id) => void fromTemplate(id)} onClose={() => setPicking(false)} />
+        <TemplatePicker
+          onPick={(tpl) => void fromTemplate(tpl)}
+          onClose={() => setPicking(false)}
+        />
       )}
     </>
   )

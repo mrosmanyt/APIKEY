@@ -5,7 +5,7 @@ import { z } from 'zod'
 import type { InvokeChannel } from '../preload/api-types'
 import type { AutomationService } from './automation/service'
 import { zWorkflow } from './automation/schema'
-import { zId, zProviderId } from './validation'
+import { zId, zTemplateDefaults } from './validation'
 
 type Handle = <A extends unknown[]>(
   channel: InvokeChannel,
@@ -14,14 +14,6 @@ type Handle = <A extends unknown[]>(
 ) => void
 
 const zApproval = z.object({ kind: z.enum(['write', 'http']), target: z.string().min(1).max(2000) })
-const zDefaults = z.record(
-  z.enum(['llm', 'image', 'video', 'tts', 'stt']),
-  z.object({
-    providerId: zProviderId,
-    model: z.string().min(1).max(300),
-    voice: z.string().max(300).optional()
-  })
-)
 
 export function registerAutomationIpc(handle: Handle, automation: AutomationService): void {
   const none = z.tuple([])
@@ -49,8 +41,10 @@ export function registerAutomationIpc(handle: Handle, automation: AutomationServ
   on('automation:saveWorkflow', one(zWorkflow), (w) => automation.saveWorkflow(w))
   on('automation:deleteWorkflow', one(zId), (id) => automation.deleteWorkflow(id))
   on('automation:templates', none, () => automation.templates())
-  on('automation:createFromTemplate', z.tuple([z.string().max(100), zDefaults]), (id, defaults) =>
-    automation.createFromTemplate(id, defaults)
+  on(
+    'automation:createFromTemplate',
+    z.tuple([z.string().max(100), zTemplateDefaults]),
+    (id, defaults) => automation.createFromTemplate(id, defaults)
   )
   on('automation:preflight', one(zId), (id) => automation.preflight(id))
   on('automation:approve', z.tuple([zId, z.array(zApproval).max(50)]), (id, approvals) =>
