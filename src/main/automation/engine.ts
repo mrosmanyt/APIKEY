@@ -18,13 +18,15 @@ import type {
 } from '@shared/automation'
 import type { TokenUsage } from '@shared/types'
 import { splitItems } from './csv'
-import { checkRead, checkUrl, checkWrite, resolveStepPath } from './safety'
+import { checkRead, checkUrl, checkWrite, realPath, resolveStepPath } from './safety'
 import { clockVars, renderTemplate, type Vars } from './template'
 
 export interface EngineDeps {
   outputDir: string
   /** App data folder; workflows may never read it. */
   protectedDir: string
+  /** Local webhook port; HTTP steps can never call it (prevents self-trigger loops). */
+  webhookPort?: number
   llm(
     r: {
       providerId: string
@@ -67,10 +69,11 @@ export interface EngineDeps {
   ): Promise<string>
   readFile(path: string): Promise<string>
   writeFile(path: string, content: string, append: boolean): Promise<void>
+  /** One request, redirects NOT followed: a 3xx comes back with its Location header. */
   http(
     r: { method: string; url: string; headers: Record<string, string>; body?: string },
     signal: AbortSignal
-  ): Promise<{ status: number; body: string }>
+  ): Promise<{ status: number; body: string; location?: string }>
   sleep(ms: number, signal: AbortSignal): Promise<void>
   /** Estimated USD for a chat call (0 when the price is unknown). */
   chatCost(providerId: string, model: string, usage: TokenUsage | undefined): number
@@ -101,6 +104,9 @@ const DISPLAY_LIMIT = 20_000
 const OUTPUT_LIMIT = 500_000
 const INPUT_LIMIT = 2000
 const SECRET_HEADER = /authorization|api[-_]?key|token|secret|cookie|password/i
+export const MAX_REDIRECTS = 5
+/** Sent with every HTTP step; the local webhook refuses requests carrying it. */
+export const AUTOMATION_HEADER = 'X-AI-Hub-Automation'
 
 export class ApprovalNeeded extends Error {
   constructor(readonly approval: Approval) {
@@ -151,6 +157,56 @@ export function evaluateCondition(left: string, op: ConditionOperator, right = '
       const b = Number(r.replace(',', '.'))
       if (!Number.isFinite(a) || !Number.isFinite(b)) return false
       return op === 'greaterThan' ? a > b : a < b
+    }
+  }
+}
+
+const SENSITIVE_ON_REDIRECT = /^(authorization|cookie|proxy-authorization)$/i
+
+/**
+ * Sends an HTTP step's request, following up to MAX_REDIRECTS redirects by hand so every hop
+ * passes the same URL check (a redirect to a new host needs its own approval). Credentials are
+ * dropped when a redirect leaves the original origin; 303 (and 301/302 after POST) become GET.
+ */
+async function followRedirects(
+  req: { method: string; url: string; headers: Record<string, string>; body?: string },
+  check: (url: string) => void,
+  onRedirect: (hop: number, url: string) => void,
+  deps: EngineDeps,
+  signal: AbortSignal
+): Promise<{ status: number; body: string }> {
+  const origin = new URL(req.url).origin
+  let current = { ...req, headers: { ...req.headers } }
+  for (let hop = 0; ; hop++) {
+    check(current.url)
+    for (const name of Object.keys(current.headers))
+      if (name.toLowerCase() === AUTOMATION_HEADER.toLowerCase()) delete current.headers[name]
+    current.headers[AUTOMATION_HEADER] = '1'
+    const res = await deps.http(current, signal)
+    if (res.status < 300 || res.status > 399 || res.status === 304 || !res.location) return res
+    if (hop >= MAX_REDIRECTS) throw new Error(`Too many redirects (more than ${MAX_REDIRECTS}).`)
+    let next: string
+    try {
+      next = new URL(res.location, current.url).toString()
+    } catch {
+      throw new Error(`Invalid redirect location: ${clip(res.location, 200)}`)
+    }
+    onRedirect(hop + 1, next)
+    const toGet =
+      res.status === 303 ||
+      ((res.status === 301 || res.status === 302) && current.method === 'POST')
+    const headers = { ...current.headers }
+    if (new URL(next).origin !== origin)
+      for (const name of Object.keys(headers))
+        if (SENSITIVE_ON_REDIRECT.test(name)) delete headers[name]
+    if (toGet)
+      for (const name of Object.keys(headers))
+        if (/^content-(type|length)$/i.test(name)) delete headers[name]
+    current = {
+      method: toGet ? 'GET' : current.method,
+      url: next,
+      headers,
+      body: toGet ? undefined : current.body
     }
   }
 }
@@ -309,7 +365,12 @@ export async function runWorkflow(opts: RunOptions, deps: EngineDeps): Promise<W
           const blocked = checkRead(filePath, deps.protectedDir, deps.outputDir)
           if (blocked) throw new Error(blocked)
           out = await deps.stt(
-            { providerId: step.providerId, model: step.model, filePath, language: step.language },
+            {
+              providerId: step.providerId,
+              model: step.model,
+              filePath: realPath(filePath),
+              language: step.language
+            },
             signal
           )
           stepRun.costUsd = deps.unitCosts.stt
@@ -320,7 +381,7 @@ export async function runWorkflow(opts: RunOptions, deps: EngineDeps): Promise<W
           rec('path', p)
           const blocked = checkRead(p, deps.protectedDir, deps.outputDir)
           if (blocked) throw new Error(blocked)
-          out = await deps.readFile(p)
+          out = await deps.readFile(realPath(p))
           break
         }
         case 'writeFile': {
@@ -328,11 +389,12 @@ export async function runWorkflow(opts: RunOptions, deps: EngineDeps): Promise<W
           const content = t(step.content)
           rec('path', p)
           rec('content', content)
-          const approval = checkWrite(p, deps.outputDir, workflow.permissions)
-          if (approval) throw new ApprovalNeeded(approval)
+          // Refuse the private folder first, so the user is never asked to approve it.
           if (checkRead(p, deps.protectedDir, deps.outputDir))
             throw new Error('Workflows cannot write into AI Hub’s private data folder.')
-          await deps.writeFile(p, content, Boolean(step.append))
+          const approval = checkWrite(p, deps.outputDir, workflow.permissions)
+          if (approval) throw new ApprovalNeeded(approval)
+          await deps.writeFile(realPath(p), content, Boolean(step.append))
           out = p
           break
         }
@@ -345,10 +407,17 @@ export async function runWorkflow(opts: RunOptions, deps: EngineDeps): Promise<W
           for (const name of Object.keys(headers))
             rec(`header ${name}`, SECRET_HEADER.test(name) ? '[hidden]' : headers[name])
           rec('body', body)
-          const check = checkUrl(url, workflow.permissions)
-          if (check.error) throw new Error(check.error)
-          if (check.approval) throw new ApprovalNeeded(check.approval)
-          const res = await deps.http({ method: step.method, url, headers, body }, signal)
+          const res = await followRedirects(
+            { method: step.method, url, headers, body },
+            (u) => {
+              const check = checkUrl(u, workflow.permissions, { webhookPort: deps.webhookPort })
+              if (check.error) throw new Error(check.error)
+              if (check.approval) throw new ApprovalNeeded(check.approval)
+            },
+            (hop, next) => rec(`redirect ${hop}`, next),
+            deps,
+            signal
+          )
           vars[`${step.id}.status`] = String(res.status)
           out = res.body
           if (res.status >= 400) {

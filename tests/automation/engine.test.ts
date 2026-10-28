@@ -187,16 +187,23 @@ describe('workflow engine', () => {
     )
     expect(http.approval).toEqual({ kind: 'http', target: 'hooks.example.com' })
 
-    const local = await runWorkflow(
+    const ping: Step = {
+      id: 'step1',
+      type: 'http',
+      method: 'GET',
+      url: 'http://localhost:8080/ping'
+    }
+    const local = await runWorkflow({ workflow: wf([ping]), source: 'manual' }, fakeDeps())
+    expect(local.status).toBe('needs_approval')
+    expect(local.approval).toEqual({ kind: 'http', target: 'localhost:8080' })
+    const localApproved = await runWorkflow(
       {
-        workflow: wf([
-          { id: 'step1', type: 'http', method: 'GET', url: 'http://localhost:8080/ping' }
-        ]),
+        workflow: wf([ping], { permissions: { writeFolders: [], httpHosts: ['localhost:8080'] } }),
         source: 'manual'
       },
       fakeDeps()
     )
-    expect(local.status).toBe('success')
+    expect(localApproved.status).toBe('success')
   })
 
   it('never reads or writes the private app data folder', async () => {

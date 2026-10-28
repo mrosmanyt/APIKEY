@@ -1,11 +1,14 @@
 /**
  * Optional local webhook server for "Local webhook" triggers. OFF unless the user enables it.
  *  - Listens on 127.0.0.1 only (never reachable from other computers).
- *  - Every request needs the random token: "Authorization: Bearer <token>" (or ?token=).
+ *  - Every request needs the random token in the "Authorization: Bearer <token>" header. It is
+ *    never accepted in the URL (URLs end up in logs, shell history and browser history).
+ *  - Requests sent by an automation HTTP step are refused, so a workflow can't trigger itself.
  *  - POST /run/<workflowId> with any text/JSON body (max 1 MB) → {{webhook.body}}.
  */
 import crypto from 'node:crypto'
 import http from 'node:http'
+import { AUTOMATION_HEADER } from './engine'
 
 export const MAX_WEBHOOK_BODY = 1024 * 1024
 
@@ -66,10 +69,9 @@ export class WebhookServer {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1')
     if (req.method === 'GET' && url.pathname === '/health') return this.send(res, 200, { ok: true })
 
-    const auth =
-      req.headers.authorization?.replace(/^Bearer\s+/i, '') ??
-      url.searchParams.get('token') ??
-      undefined
+    if (req.headers[AUTOMATION_HEADER.toLowerCase()] !== undefined)
+      return this.send(res, 403, { error: 'Workflows cannot call the AI Hub webhook' })
+    const auth = /^Bearer\s+(\S+)\s*$/i.exec(req.headers.authorization ?? '')?.[1]
     if (!tokenMatches(auth, this.getToken()))
       return this.send(res, 401, { error: 'Invalid or missing token' })
 

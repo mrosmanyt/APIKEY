@@ -133,6 +133,42 @@ describe('AutomationService', () => {
     expect(automation.exportWorkflows([])).not.toContain(SECRET)
   })
 
+  it('never offers or stores an approval for the private data folder', async () => {
+    const { automation, dir } = setup()
+    await automation.apply()
+    fs.mkdirSync(path.join(dir, 'docs'), { recursive: true })
+    fs.symlinkSync(
+      path.join(dir, 'data'),
+      path.join(dir, 'docs', 'link'),
+      process.platform === 'win32' ? 'junction' : 'dir'
+    )
+    automation.saveWorkflow(
+      wf([
+        {
+          id: 'step1',
+          type: 'writeFile',
+          path: path.join(dir, 'docs', 'link', 'x.txt'),
+          content: 'x'
+        },
+        { id: 'step2', type: 'writeFile', path: path.join(dir, 'data', 'y.txt'), content: 'y' },
+        { id: 'step3', type: 'writeFile', path: path.join(dir, 'docs', 'ok.txt'), content: 'z' }
+      ])
+    )
+    expect(automation.preflight('wf_1')).toEqual([
+      { kind: 'write', target: fs.realpathSync.native(path.join(dir, 'docs')) }
+    ])
+    const w = automation.approve('wf_1', [
+      { kind: 'write', target: path.join(dir, 'data') },
+      { kind: 'write', target: path.join(dir, 'docs', 'link') },
+      { kind: 'write', target: path.join(dir, 'docs') }
+    ])
+    expect(w.permissions.writeFolders).toEqual([path.join(dir, 'docs')])
+    const run = await done(automation, automation.runManually('wf_1'))
+    expect(run.status).toBe('failed')
+    expect(run.error).toMatch(/private data folder/)
+    expect(fs.existsSync(path.join(dir, 'data', 'x.txt'))).toBe(false)
+  })
+
   it('pauses on approvals, approves, and retries from the failed step', async () => {
     const { automation, dir } = setup()
     await automation.apply()
@@ -412,10 +448,12 @@ describe('webhook server', () => {
       })
       expect(ok.status).toBe(202)
       expect(await ok.json()).toEqual({ runId: 'run_1' })
-      expect((await fetch(`${base}/run/wf_1?token=tok-123`, { method: 'GET' })).status).toBe(405)
-      expect((await fetch(`${base}/elsewhere?token=tok-123`, { method: 'POST' })).status).toBe(404)
-      const big = await fetch(`${base}/run/wf_1?token=tok-123`, {
+      const auth = { Authorization: 'Bearer tok-123' }
+      expect((await fetch(`${base}/run/wf_1`, { method: 'GET', headers: auth })).status).toBe(405)
+      expect((await fetch(`${base}/elsewhere`, { method: 'POST', headers: auth })).status).toBe(404)
+      const big = await fetch(`${base}/run/wf_1`, {
         method: 'POST',
+        headers: auth,
         body: 'x'.repeat(1024 * 1024 + 10)
       }).catch(() => undefined)
       if (big) expect(big.status).toBe(413)

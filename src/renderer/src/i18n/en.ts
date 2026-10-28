@@ -550,7 +550,7 @@ export const en = {
     method: 'Method',
     url: 'URL',
     urlHint:
-      'Calling an external website needs your approval the first time. API keys are never sent.',
+      'Calling any website or local service (localhost included) needs your approval the first time, and so does each new host it redirects to. API keys are never sent.',
     headers: 'Headers',
     addHeader: 'Add header',
     headerName: 'Name',
@@ -615,7 +615,7 @@ export const en = {
     maxRunsPerHour: 'Max runs per hour (0 = unlimited)',
     permissions: 'Approved for this workflow',
     noPermissions:
-      'Nothing approved yet. You will be asked before it writes outside the output folder or calls an external website.',
+      'Nothing approved yet. You will be asked before it writes outside the output folder or calls a website or local service.',
     revoke: 'Revoke',
     approveTitle: 'Allow this workflow?',
     approveIntro: '"{name}" wants to:',

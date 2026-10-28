@@ -156,9 +156,23 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
   and outputs stored in run history are redacted with `shared/redact.ts`, truncated, and header
   values with secret-looking names are stored as `[hidden]`.
 - **Approvals, not sandboxes.** A workflow may write inside the output folder freely; anything
-  else needs a per-folder approval stored on that workflow. External HTTP hosts need a per-host
-  approval (loopback is allowed; URLs with credentials are rejected). The app data folder (keys,
-  license, stores) can never be read or written. Approvals are known up front where paths/URLs
+  else needs a per-folder approval stored on that workflow. Every HTTP host needs a per-host
+  (host:port) approval — loopback included, since local services (Ollama, admin panels) are as
+  sensitive as remote ones; URLs with credentials are rejected. The app data folder (keys,
+  license, stores) can never be read or written, and is refused before approval is considered,
+  so the user is never asked to approve it. Paths are compared after `fs.realpathSync.native`
+  (for a file that doesn't exist yet, the nearest existing parent), so symlinks and junctions
+  can't reach the data folder; file I/O then uses the resolved path.
+- **Redirects** are followed by the engine, not the transport: each hop goes through the same URL
+  check (a new host needs approval; loopback and the webhook port are refused), at most 5 hops,
+  `Authorization`/`Cookie` are dropped when the origin changes, and 303 (or 301/302 after POST)
+  becomes GET. Electron's `net.fetch` rejects `redirect: 'manual'` ("Redirect was cancelled")
+  instead of returning the 3xx, so `src/main/net-fetch.ts` implements `'manual'` with
+  `net.request` (still Chromium's network stack: system proxy and certificates).
+- **No self-triggering.** HTTP steps can never target the local webhook port on a loopback
+  address (in any spelling: `127.1`, `2130706433`, `[::ffff:127.0.0.1]`, `localhost.`), and every
+  step request carries `X-AI-Hub-Automation: 1`, which the webhook refuses — this also covers a
+  DNS name that resolves to 127.0.0.1. Approvals are known up front where paths/URLs
   are literal (preflight before a manual run); otherwise the run stops with "Needs approval"
   and can be approved and retried. The editor's save cannot add approvals — only the approve
   call can — and imports/exports drop them.
@@ -170,8 +184,9 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
 - **Folder watch** polls (with `fs.watch` as a hint to scan sooner) because `fs.watch` alone is
   unreliable on network drives, and reports a file only once its size is stable, so half-copied
   files are not processed.
-- **Webhook** binds to 127.0.0.1 only, uses a 24-byte random token compared in constant time,
-  limits bodies to 1 MB and is off unless enabled.
+- **Webhook** binds to 127.0.0.1 only, uses a 24-byte random token compared in constant time and
+  accepted only in the `Authorization: Bearer` header (never the query string, which leaks into
+  logs and history), limits bodies to 1 MB and is off unless enabled.
 - **Background.** Tray mode keeps the app alive when the window is closed; "Start with Windows"
   registers a login item with `--hidden` (packaged builds only) and is only offered when tray
   mode is on.

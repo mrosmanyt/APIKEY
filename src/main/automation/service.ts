@@ -29,7 +29,7 @@ import { nextCronTime, scheduleToCron, validateCron } from './cron'
 import { csvToRecords, txtLines } from './csv'
 import { runWorkflow, type EngineDeps } from './engine'
 import { exportPack, importPack } from './io'
-import { checkUrl, checkWrite, resolveStepPath, runsInLastHour } from './safety'
+import { checkRead, checkUrl, checkWrite, resolveStepPath, runsInLastHour } from './safety'
 import { allSteps, validateWorkflow } from './schema'
 import { rowVars, templateVariables, type Vars } from './template'
 import { applyDefaults, TEMPLATES, type DefaultModels } from './templates'
@@ -376,11 +376,15 @@ export class AutomationService {
     for (const s of allSteps(wf.steps)) {
       if (s.disabled) continue
       if (s.type === 'writeFile' && templateVariables(s.path).length === 0 && s.path.trim()) {
-        const a = checkWrite(resolveStepPath(s.path, out), out, wf.permissions)
+        const target = resolveStepPath(s.path, out)
+        if (checkRead(target, this.dirs.protectedDir, out)) continue // the run will refuse it
+        const a = checkWrite(target, out, wf.permissions)
         if (a) found.set(`${a.kind}:${a.target}`, a)
       }
       if (s.type === 'http' && templateVariables(s.url).length === 0) {
-        const a = checkUrl(s.url.trim(), wf.permissions).approval
+        const a = checkUrl(s.url.trim(), wf.permissions, {
+          webhookPort: this.settings.webhookPort
+        }).approval
         if (a) found.set(`${a.kind}:${a.target}`, a)
       }
     }
@@ -393,8 +397,11 @@ export class AutomationService {
     const writeFolders = new Set(wf.permissions.writeFolders)
     const httpHosts = new Set(wf.permissions.httpHosts)
     for (const a of approvals) {
-      if (a.kind === 'write') writeFolders.add(path.resolve(a.target))
-      else httpHosts.add(a.target.toLowerCase())
+      if (a.kind === 'write') {
+        // Never store an approval for the private data folder (it would be refused anyway).
+        if (checkRead(a.target, this.dirs.protectedDir, outputDir(this.app))) continue
+        writeFolders.add(path.resolve(a.target))
+      } else httpHosts.add(a.target.toLowerCase())
     }
     this.app.logger.info(`Automation: approvals added to "${wf.name}"`, approvals)
     return this.workflows.patch(workflowId, {
@@ -763,6 +770,7 @@ export class AutomationService {
     return {
       outputDir: outputDir(this.app),
       protectedDir: this.dirs.protectedDir,
+      webhookPort: s.webhookPort,
       llm: async (r, signal) => {
         const res = await this.ai.completeChat(
           {
@@ -831,14 +839,21 @@ export class AutomationService {
         else await fs.promises.writeFile(p, content, 'utf8')
       },
       http: async (r, signal) => {
+        // Redirects are followed by the engine, one checked hop at a time.
         const res = await this.app.fetch(r.url, {
           method: r.method,
           headers: r.headers,
           body: r.body,
+          redirect: 'manual',
           signal: AbortSignal.any([signal, AbortSignal.timeout(HTTP_TIMEOUT_MS)])
         })
+        const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null
         const text = await res.text()
-        return { status: res.status, body: text.slice(0, MAX_HTTP_BYTES) }
+        return {
+          status: res.status,
+          body: text.slice(0, MAX_HTTP_BYTES),
+          location: location ?? undefined
+        }
       },
       sleep,
       chatCost: (_p, _m, u) =>

@@ -185,9 +185,12 @@ provider/model, then **Save**.
 - **Folder watch** — runs once for each new file that appears in a folder (optionally only
   some types, e.g. `*.mp3;*.wav`). Files already there when watching starts are ignored.
 - **Local webhook** — turn on the webhook server in Settings › Automation. It only listens on
-  this PC (`127.0.0.1`) and needs the random token shown there:
+  this PC (`127.0.0.1`) and needs the random token shown there, sent in the
+  `Authorization: Bearer <token>` header:
   `curl -X POST http://127.0.0.1:17345/run/<workflow-id> -H "Authorization: Bearer <token>" -d "text"`.
-  **Regenerate token** invalidates the old one.
+  The token is **only** accepted in that header — putting it in the URL (`?token=…`) does not
+  work, because URLs end up in logs and browser history. **Regenerate token** invalidates the
+  old one. Workflows cannot call the webhook themselves (that could start an endless loop).
 
 Schedules, folder watches and webhooks only start a workflow that is ticked **Enabled**.
 Manual runs always work.
@@ -204,9 +207,13 @@ re-runs from the step that failed, reusing the earlier results (no need to pay f
 
 **Safety.**
 - AI Hub asks before a workflow **writes outside your output folder** (relative paths are saved
-  in *output folder › automation*) or **calls an external website** (each host is approved once).
+  in *output folder › automation*) or **calls a website or local service** (each host and port
+  is approved once — this includes services on your own PC such as `localhost:11434`). If a
+  website **redirects** to another host, that host needs its own approval; at most 5 redirects
+  are followed, and passwords/cookies are not passed on to a different site.
   The workflow's **Safety** section lists what you approved; **Revoke** removes it. AI Hub's own
-  data folder can never be read or written by a workflow.
+  data folder can never be read or written by a workflow — not even through a shortcut-style
+  link (symlink or junction) that points into it.
 - **Spending cap** — the run (or the whole batch) stops when its estimated cost reaches the cap.
   Estimates use token counts and the per-item costs in Settings › Automation; they are not your
   bill.

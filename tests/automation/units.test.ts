@@ -159,7 +159,11 @@ describe('safety', () => {
       kind: 'http',
       target: 'evil.example.com'
     })
-    expect(checkUrl('http://127.0.0.1:5000/', perms).approval).toBeUndefined()
+    // Loopback is a host like any other: it needs approval too.
+    expect(checkUrl('http://127.0.0.1:5000/', perms).approval).toEqual({
+      kind: 'http',
+      target: '127.0.0.1:5000'
+    })
     expect(checkUrl('file:///etc/passwd', perms).error).toMatch(/http/)
     expect(checkUrl('https://user:pw@api.example.com', perms).error).toMatch(/credentials/)
     expect(checkUrl('not a url', perms).error).toMatch(/valid URL/)

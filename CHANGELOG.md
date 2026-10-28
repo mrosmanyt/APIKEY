@@ -12,15 +12,19 @@ All notable changes to AI Hub are documented here. The format follows
   write file, HTTP request, condition (if/else with continue / stop / go to), delay and loop.
   Steps reference earlier results with `{{stepId.output}}`.
 - **Triggers**: manual, schedule (hourly, daily at a time, weekly, custom cron), folder watch
-  and a local webhook (127.0.0.1 only, random bearer token, off unless enabled).
+  and a local webhook (127.0.0.1 only, random token accepted only in the
+  `Authorization: Bearer` header, off unless enabled).
 - **Batch mode** for every CSV row, TXT line or file in a folder, with a concurrency limit and
   pause / resume / cancel.
 - **Templates**: Blog post plus cover image, Bulk image generation from CSV, Transcribe a folder
   of audio files, Translate text files, Daily summary of a text file.
 - **Runs history** with status, duration, each step's input/output, estimated cost, errors and
   "Retry from failed step".
-- **Safety**: approval before writing outside the output folder or calling an external host;
-  the app data folder is always off-limits; per-workflow spending cap and max runs per hour.
+- **Safety**: approval before writing outside the output folder or calling any host (loopback
+  included); redirects are followed by hand (max 5) and re-checked, so a new host needs its own
+  approval; paths are checked after resolving symlinks/junctions, so the app data folder is
+  always off-limits; HTTP steps can't call AI Hub's own webhook; per-workflow spending cap and
+  max runs per hour.
 - **Background**: optional tray mode, "Start AI Hub with Windows" (off by default) and Windows
   notifications when runs finish or fail.
 - **Import / export** of workflows as JSON packs (approvals are stripped; imports arrive

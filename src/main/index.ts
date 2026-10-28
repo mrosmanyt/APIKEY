@@ -11,6 +11,7 @@ import {
 import { APP_NAME, DEFAULT_SETTINGS } from '@shared/defaults'
 import { mockAdapter } from '../providers/mock'
 import { ADAPTERS, ProviderRegistry, registry } from '../providers/registry'
+import { createAppFetch } from './net-fetch'
 import { BackgroundManager } from './automation/background'
 import { AutomationService } from './automation/service'
 import { registerIpc } from './ipc'
@@ -149,7 +150,7 @@ app.whenReady().then(() => {
         : registry,
     logger,
     // Electron's net.fetch uses Chromium's network stack (system proxy, certificates).
-    fetch: (input, init) => net.fetch(input, init as RequestInit),
+    fetch: createAppFetch(net),
     defaultOutputDir: path.join(app.getPath('documents'), APP_NAME),
     emit: (channel, payload) => {
       for (const w of BrowserWindow.getAllWindows()) w.webContents.send(channel, payload)
