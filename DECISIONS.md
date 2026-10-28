@@ -127,6 +127,14 @@ encrypted** with a passphrase they choose (min. 8 characters, entered twice):
   never appear in a log line or error, and is never stored. It travels renderer → main over
   IPC once, like an API key does when first saved.
 - Legacy v1 files (plain keys, only produced by pre-release builds) can still be imported.
+- **Settings in a backup are untrusted input.** `sanitizeBackupSettings` validates each field
+  with the matching `zSettingsPatch` schema (the one `settings:update` uses) and drops unknown
+  or invalid fields individually rather than casting the object; `providerConfig` is checked
+  per provider with `zConfig`. Model/voice caches are skipped (they refill from the providers).
+- **Automation is never restored.** A backup made on a PC with Automation, the webhook or
+  "Start with Windows" switched on must not turn those on somewhere else: the module can run
+  unattended, listen on a port and start at login, so it is only ever enabled on the PC
+  itself. The restore keeps the current `automation` block and the result tells the user.
 
 ## i18n
 
@@ -143,6 +151,53 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
 - "Usable" provider pickers show all providers that have a capability, but disable those
   without a valid key ("— add key in Settings") so users discover what is available.
 - First launch with no keys opens Settings › API Keys directly.
+
+## Automation
+
+- **Opt-in module.** `settings.automation.enabled` defaults to false. `AutomationService.apply()`
+  starts schedules, folder watchers and the webhook only when it is on, and `stopAll()` tears
+  them down (aborting running runs and pausing batches) when it is turned off. Every
+  `automation:*` IPC channel except `status` refuses to work while it is off, and the renderer
+  unmounts the screen.
+- **Engine in the main process.** Workflows are data (zod-validated); the engine calls the same
+  `AiService`/`VideoService` code the screens use, so keys stay in the main process. Step inputs
+  and outputs stored in run history are redacted with `shared/redact.ts`, truncated, and header
+  values with secret-looking names are stored as `[hidden]`.
+- **Approvals, not sandboxes.** A workflow may write inside the output folder freely; anything
+  else needs a per-folder approval stored on that workflow. Every HTTP host needs a per-host
+  (host:port) approval — loopback included, since local services (Ollama, admin panels) are as
+  sensitive as remote ones; URLs with credentials are rejected. The app data folder (keys,
+  license, stores) can never be read or written, and is refused before approval is considered,
+  so the user is never asked to approve it. Paths are compared after `fs.realpathSync.native`
+  (for a file that doesn't exist yet, the nearest existing parent), so symlinks and junctions
+  can't reach the data folder; file I/O then uses the resolved path.
+- **Redirects** are followed by the engine, not the transport: each hop goes through the same URL
+  check (a new host needs approval; loopback and the webhook port are refused), at most 5 hops,
+  `Authorization`/`Cookie` are dropped when the origin changes, and 303 (or 301/302 after POST)
+  becomes GET. Electron's `net.fetch` rejects `redirect: 'manual'` ("Redirect was cancelled")
+  instead of returning the 3xx, so `src/main/net-fetch.ts` implements `'manual'` with
+  `net.request` (still Chromium's network stack: system proxy and certificates).
+- **No self-triggering.** HTTP steps can never target the local webhook port on a loopback
+  address (in any spelling: `127.1`, `2130706433`, `[::ffff:127.0.0.1]`, `localhost.`), and every
+  step request carries `X-AI-Hub-Automation: 1`, which the webhook refuses — this also covers a
+  DNS name that resolves to 127.0.0.1. Approvals are known up front where paths/URLs
+  are literal (preflight before a manual run); otherwise the run stops with "Needs approval"
+  and can be approved and retried. The editor's save cannot add approvals — only the approve
+  call can — and imports/exports drop them.
+- **Cost estimates for caps** use token counts × per-1M prices and flat per-item prices from
+  Settings › Automation. They are deliberately simple and labelled as estimates.
+- **Scheduling** uses a small built-in 5-field cron parser (day-of-month/day-of-week OR
+  semantics like Vixie cron) instead of a dependency; timers are re-armed in ≤ 24 h chunks so
+  sleep/clock changes don't cause drift beyond one chunk.
+- **Folder watch** polls (with `fs.watch` as a hint to scan sooner) because `fs.watch` alone is
+  unreliable on network drives, and reports a file only once its size is stable, so half-copied
+  files are not processed.
+- **Webhook** binds to 127.0.0.1 only, uses a 24-byte random token compared in constant time and
+  accepted only in the `Authorization: Bearer` header (never the query string, which leaks into
+  logs and history), limits bodies to 1 MB and is off unless enabled.
+- **Background.** Tray mode keeps the app alive when the window is closed; "Start with Windows"
+  registers a login item with `--hidden` (packaged builds only) and is only offered when tray
+  mode is on.
 
 ## Development helpers
 

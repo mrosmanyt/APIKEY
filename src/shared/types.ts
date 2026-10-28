@@ -3,6 +3,7 @@
  * Everything here must be plain serialisable data (it crosses the IPC boundary).
  * API keys never appear in any of these types.
  */
+import type { AutomationSettings } from './automation'
 
 export type Capability = 'chat' | 'image' | 'video' | 'tts' | 'stt'
 export const CAPABILITIES: Capability[] = ['chat', 'image', 'video', 'tts', 'stt']
@@ -356,6 +357,8 @@ export interface Settings {
   prices: PriceRow[]
   /** The first-run setup wizard was finished or skipped. */
   onboardingCompleted: boolean
+  /** Optional Automation module (off by default). */
+  automation: AutomationSettings
 }
 
 export interface ProviderUsage {
@@ -460,4 +463,8 @@ export interface RestoreResult {
   prompts: number
   keys: number
   settings: boolean
+  /** The backup had Automation settings; they are never restored (this PC's stay as they are). */
+  automationSettingsSkipped: boolean
+  /** Settings fields in the backup that were unknown or invalid and were skipped. */
+  skippedSettings: string[]
 }

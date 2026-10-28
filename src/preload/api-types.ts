@@ -33,6 +33,22 @@ import type {
   VideoRequest,
   VoiceInfo
 } from '../shared/types'
+import type {
+  Approval,
+  BatchJob,
+  BatchSource,
+  WebhookInfo,
+  Workflow,
+  WorkflowRun,
+  WorkflowTemplate
+} from '../shared/automation'
+
+export type TemplateDefaults = Partial<
+  Record<
+    'llm' | 'image' | 'video' | 'tts' | 'stt',
+    { providerId: string; model: string; voice?: string }
+  >
+>
 
 type R<T> = Promise<IpcResult<T>>
 
@@ -125,6 +141,44 @@ export interface AiHubApi {
     save(prompt: SavedPrompt): R<SavedPrompt>
     delete(id: string): R<void>
   }
+  automation: {
+    status(): R<{ enabled: boolean; running: boolean; nextRuns: Record<string, number> }>
+    listWorkflows(): R<Workflow[]>
+    saveWorkflow(w: Workflow): R<Workflow>
+    deleteWorkflow(id: string): R<void>
+    templates(): R<WorkflowTemplate[]>
+    createFromTemplate(templateId: string, defaults: TemplateDefaults): R<Workflow>
+    /** Approvals a manual run needs that can be known in advance. */
+    preflight(workflowId: string): R<Approval[]>
+    approve(workflowId: string, approvals: Approval[]): R<Workflow>
+    revoke(workflowId: string, kind: Approval['kind'], target: string): R<Workflow | null>
+    run(workflowId: string, input?: string): R<string>
+    cancelRun(runId: string): R<void>
+    listRuns(workflowId?: string): R<WorkflowRun[]>
+    clearRuns(): R<void>
+    retryRun(runId: string): R<string>
+    approveRun(runId: string): R<string>
+    listBatches(): R<BatchJob[]>
+    startBatch(opts: {
+      workflowId: string
+      source: BatchSource
+      sourcePath: string
+      pattern?: string
+      concurrency: number
+    }): R<BatchJob>
+    pauseBatch(id: string): R<BatchJob | null>
+    resumeBatch(id: string): R<BatchJob | null>
+    cancelBatch(id: string): R<BatchJob | null>
+    deleteBatch(id: string): R<void>
+    export(workflowIds: string[]): R<string | null>
+    import(): R<{ imported: number; skipped: string[] } | null>
+    webhookInfo(): R<WebhookInfo>
+    regenerateToken(): R<WebhookInfo>
+    pickPath(kind: 'file' | 'folder' | 'save', extensions?: string[]): R<string | null>
+    onRun(cb: (run: WorkflowRun) => void): () => void
+    onBatch(cb: (batch: BatchJob) => void): () => void
+    onChanged(cb: () => void): () => void
+  }
   backup: {
     /** includeKeys requires a passphrase (min 8 chars); keys are encrypted with it. */
     export(includeKeys: boolean, passphrase?: string): R<BackupResult | null>
@@ -196,6 +250,32 @@ export const INVOKE_CHANNELS = [
   'prompts:save',
   'prompts:delete',
   'backup:export',
+  'automation:status',
+  'automation:listWorkflows',
+  'automation:saveWorkflow',
+  'automation:deleteWorkflow',
+  'automation:templates',
+  'automation:createFromTemplate',
+  'automation:preflight',
+  'automation:approve',
+  'automation:revoke',
+  'automation:run',
+  'automation:cancelRun',
+  'automation:listRuns',
+  'automation:clearRuns',
+  'automation:retryRun',
+  'automation:approveRun',
+  'automation:listBatches',
+  'automation:startBatch',
+  'automation:pauseBatch',
+  'automation:resumeBatch',
+  'automation:cancelBatch',
+  'automation:deleteBatch',
+  'automation:export',
+  'automation:import',
+  'automation:webhookInfo',
+  'automation:regenerateToken',
+  'automation:pickPath',
   'backup:pickImport',
   'backup:import',
   'backup:cancelImport'
@@ -203,4 +283,10 @@ export const INVOKE_CHANNELS = [
 
 export type InvokeChannel = (typeof INVOKE_CHANNELS)[number]
 
-export const EVENT_CHANNELS = ['chat:event', 'video:update'] as const
+export const EVENT_CHANNELS = [
+  'chat:event',
+  'video:update',
+  'automation:run',
+  'automation:batch',
+  'automation:changed'
+] as const

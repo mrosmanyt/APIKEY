@@ -176,6 +176,24 @@ export const zExtractRequest = z.object({
     .max(70 * MB)
 })
 
+export const zAutomationSettings = z.object({
+  enabled: z.boolean(),
+  runInTray: z.boolean(),
+  startWithWindows: z.boolean(),
+  notifyOnSuccess: z.boolean(),
+  notifyOnFailure: z.boolean(),
+  webhookEnabled: z.boolean(),
+  webhookPort: z.number().int().min(1024).max(65535),
+  unitCosts: z.object({
+    image: z.number().min(0).max(1000),
+    video: z.number().min(0).max(1000),
+    tts: z.number().min(0).max(1000),
+    stt: z.number().min(0).max(1000),
+    chatInputPer1M: z.number().min(0).max(10_000),
+    chatOutputPer1M: z.number().min(0).max(10_000)
+  })
+})
+
 export const zSettingsPatch = z
   .object({
     theme: z.enum(['system', 'light', 'dark']),
@@ -187,7 +205,8 @@ export const zSettingsPatch = z
       maxTokens: z.number().int().min(1).max(1_000_000)
     }),
     prices: z.array(zPriceRow).max(2000),
-    onboardingCompleted: z.boolean()
+    onboardingCompleted: z.boolean(),
+    automation: zAutomationSettings
   })
   .partial()
 
@@ -202,3 +221,13 @@ export const zPrompt = z.object({
   createdAt: z.number(),
   updatedAt: z.number()
 })
+
+/** Defaults for the capabilities the user has set up; any subset (zod v4 records are exhaustive). */
+export const zTemplateDefaults = z.partialRecord(
+  z.enum(['llm', 'image', 'video', 'tts', 'stt']),
+  z.object({
+    providerId: zProviderId,
+    model: z.string().min(1).max(300),
+    voice: z.string().max(300).optional()
+  })
+)

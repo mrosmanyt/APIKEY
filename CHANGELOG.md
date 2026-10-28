@@ -5,12 +5,46 @@ All notable changes to AI Hub are documented here. The format follows
 
 ## [Unreleased]
 
+### Added — Automation (optional, off by default)
+- **Settings › Automation** master switch. When off, the Automation screen is hidden and no
+  schedules, folder watchers, webhook server or tray icon run.
+- **Workflow builder**: vertical list of steps — Chat/LLM, image, video, TTS, STT, read file,
+  write file, HTTP request, condition (if/else with continue / stop / go to), delay and loop.
+  Steps reference earlier results with `{{stepId.output}}`.
+- **Triggers**: manual, schedule (hourly, daily at a time, weekly, custom cron), folder watch
+  and a local webhook (127.0.0.1 only, random token accepted only in the
+  `Authorization: Bearer` header, off unless enabled).
+- **Batch mode** for every CSV row, TXT line or file in a folder, with a concurrency limit and
+  pause / resume / cancel.
+- **Templates**: Blog post plus cover image, Bulk image generation from CSV, Transcribe a folder
+  of audio files, Translate text files, Daily summary of a text file.
+- **Runs history** with status, duration, each step's input/output, estimated cost, errors and
+  "Retry from failed step".
+- **Safety**: approval before writing outside the output folder or calling any host (loopback
+  included); redirects are followed by hand (max 5) and re-checked, so a new host needs its own
+  approval; paths are checked after resolving symlinks/junctions, so the app data folder is
+  always off-limits; HTTP steps can't call AI Hub's own webhook; per-workflow spending cap and
+  max runs per hour.
+- **Background**: optional tray mode, "Start AI Hub with Windows" (off by default) and Windows
+  notifications when runs finish or fail.
+- **Urdu** translations for the whole Automation screen, its templates and Settings › Automation; a test now
+  names any English key missing from the Urdu file.
+- **Import / export** of workflows as JSON packs (approvals are stripped; imports arrive
+  disabled).
+- All provider calls still go through the main process with the encrypted keys; keys never
+  appear in workflows, run history, logs or exported files.
+
 ### Security
 - Backups no longer store API keys in plain text. "Include API keys" now requires a
   passphrase (min. 8 characters); keys are encrypted with scrypt (random 16-byte salt) +
   AES-256-GCM (random 12-byte IV). Import asks for the passphrase, reports a wrong
   passphrase clearly without changing any data, and can import everything except the keys.
   Passphrases and keys are never logged. Backup format version 2.
+- Restoring a backup validates its settings field by field with the same schema as the
+  Settings screen; unknown or invalid fields are skipped (and listed) instead of being copied
+  in. **Automation settings are never restored**: Automation, tray mode, start with Windows
+  and the webhook stay as they are on this PC. Cached model/voice lists are not restored either
+  (they refresh from the providers).
 
 ### Changed
 - License tools are now dependency-free Node scripts (`tools/*.mjs`): they run on Windows

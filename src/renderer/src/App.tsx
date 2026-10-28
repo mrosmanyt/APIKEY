@@ -10,6 +10,7 @@ import { useApp, type Page } from './lib/store'
 import { emitShortcut, matchShortcut } from './lib/shortcuts'
 import { useIsDark } from './lib/theme'
 import { AudioPage } from './pages/AudioPage'
+import { AutomationPage } from './pages/AutomationPage'
 import { ChatPage } from './pages/ChatPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ImagesPage } from './pages/ImagesPage'
@@ -27,6 +28,7 @@ const PAGES: Record<Page, () => ReactNode> = {
   audio: () => <AudioPage />,
   history: () => <HistoryPage />,
   prompts: () => <PromptsPage />,
+  automation: () => <AutomationPage />,
   settings: () => <SettingsPage />
 }
 
@@ -36,11 +38,11 @@ export function App() {
   const license = useApp((s) => s.license)
   const page = useApp((s) => s.page)
   const settings = useApp((s) => s.settings)
+  const navigate = useApp((s) => s.navigate)
   const [error, setError] = useState<string>()
   // Pages stay mounted after first visit so streams and form state survive navigation.
   const [visited, setVisited] = useState<Set<Page>>(new Set())
   useIsDark(true)
-  const navigate = useApp((s) => s.navigate)
   const shortcutsOpen = useApp((s) => s.shortcutsOpen)
   const setShortcutsOpen = useApp((s) => s.setShortcutsOpen)
   const licensed = Boolean(license && (license.activated || license.devSkipped))
@@ -69,9 +71,22 @@ export function App() {
     init().catch((err) => setError(errorInfo(err).message))
   }, [init])
 
+  const automationOn = Boolean(settings?.automation.enabled)
   useEffect(() => {
     setVisited((v) => (v.has(page) ? v : new Set(v).add(page)))
   }, [page])
+
+  // When Automation is turned off, its screen is unmounted (no listeners, no polling).
+  useEffect(() => {
+    if (automationOn) return
+    setVisited((v) => {
+      if (!v.has('automation')) return v
+      const next = new Set(v)
+      next.delete('automation')
+      return next
+    })
+    if (page === 'automation') navigate('settings')
+  }, [automationOn, page, navigate])
 
   if (error) return <div className="p-8 text-red-600">{error}</div>
   if (!ready || !license)

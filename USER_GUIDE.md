@@ -157,6 +157,79 @@ Save favourite prompts, mark them with ★, and click **Use** to send them to th
 You can also insert saved prompts with the 🔖 button on the Chat, Code, Images, Video and
 Audio screens.
 
+### Automation (optional)
+Automation is **off by default**. Turn it on in **Settings › Automation**; an **Automation**
+item then appears in the sidebar. While it is off, nothing related to it runs: no schedules,
+no folder watching, no webhook server and no tray icon.
+
+**Workflows.** A workflow is a vertical list of steps that run from top to bottom:
+Chat/LLM prompt, generate image, generate video, text to speech, speech to text, read file,
+write file, HTTP request, condition (if / else), delay and loop. A step can use the result of
+an earlier one with `{{stepId.output}}` (for example `{{step1.output}}`); click a variable chip
+under a field to copy it. Other variables: `{{input}}` (the text you type when you run it, or
+the batch item), `{{date}}`, `{{time}}`, `{{datetime}}`, `{{workflow.name}}`, inside a loop
+`{{loop.item}}` / `{{loop.index}}`, for folder triggers `{{trigger.file}}` /
+`{{trigger.fileName}}`, for HTTP steps `{{stepId.status}}`, and for webhooks `{{webhook.body}}`.
+A condition can continue, stop the workflow or jump to another step.
+
+**Start from a template.** Click **From template**: *Blog post plus cover image*, *Bulk image
+generation from CSV*, *Transcribe a folder of audio files*, *Translate text files* and *Daily
+summary of a text file*. Templates use the providers you have set up; check each step's
+provider/model, then **Save**.
+
+**Triggers.**
+- **Run manually** — the **Run** button (you can type an input).
+- **Schedule** — every hour, every day at a time, every week, or a custom cron expression
+  (`minute hour day month weekday`, e.g. `0 9 * * 1-5`). Schedules run only while AI Hub is
+  open (or in the tray).
+- **Folder watch** — runs once for each new file that appears in a folder (optionally only
+  some types, e.g. `*.mp3;*.wav`). Files already there when watching starts are ignored.
+- **Local webhook** — turn on the webhook server in Settings › Automation. It only listens on
+  this PC (`127.0.0.1`) and needs the random token shown there, sent in the
+  `Authorization: Bearer <token>` header:
+  `curl -X POST http://127.0.0.1:17345/run/<workflow-id> -H "Authorization: Bearer <token>" -d "text"`.
+  The token is **only** accepted in that header — putting it in the URL (`?token=…`) does not
+  work, because URLs end up in logs and browser history. **Regenerate token** invalidates the
+  old one. Workflows cannot call the webhook themselves (that could start an endless loop).
+
+Schedules, folder watches and webhooks only start a workflow that is ticked **Enabled**.
+Manual runs always work.
+
+**Batch.** On the **Batch** tab, run a workflow once for every row of a CSV file (the
+`prompt` column, or the first column, becomes `{{input}}`; every column is available as
+`{{row.column_name}}`), every line of a TXT file, or every file in a folder. Choose how many
+run at the same time, and **Pause**, **Resume** or **Cancel** at any time. A batch that was
+running when you closed AI Hub is paused; resume it when you are ready.
+
+**Runs history.** The **Runs** tab lists every run with its status, duration and estimated
+cost. Click a run to see each step's input and output and any error. **Retry from failed step**
+re-runs from the step that failed, reusing the earlier results (no need to pay for them again).
+
+**Safety.**
+- AI Hub asks before a workflow **writes outside your output folder** (relative paths are saved
+  in *output folder › automation*) or **calls a website or local service** (each host and port
+  is approved once — this includes services on your own PC such as `localhost:11434`). If a
+  website **redirects** to another host, that host needs its own approval; at most 5 redirects
+  are followed, and passwords/cookies are not passed on to a different site.
+  The workflow's **Safety** section lists what you approved; **Revoke** removes it. AI Hub's own
+  data folder can never be read or written by a workflow — not even through a shortcut-style
+  link (symlink or junction) that points into it.
+- **Spending cap** — the run (or the whole batch) stops when its estimated cost reaches the cap.
+  Estimates use token counts and the per-item costs in Settings › Automation; they are not your
+  bill.
+- **Max runs per hour** — extra automatic runs are skipped.
+- API keys are never put into workflows, run history, logs or exported files. AI steps only
+  name a provider and model; AI Hub adds the key itself.
+
+**Import / export.** **Export…** saves one workflow (or **Export all…**) as a `.json` file you
+can share or sell. Approvals are not exported. Imported workflows arrive **disabled** with no
+approvals, so you can check them before turning them on.
+
+**Background.** In Settings › Automation you can **keep AI Hub running in the tray** when the
+window is closed (so schedules keep running), **start AI Hub with Windows** (off by default;
+starts hidden in the tray), and choose Windows notifications when a run finishes or fails.
+Right-click the tray icon to open or quit AI Hub.
+
 ### Settings
 - **API Keys** — add, test, replace and delete keys.
 - **Defaults** — provider/model selected by default on each screen.
@@ -178,6 +251,12 @@ Audio screens.
   try again, or choose **Import without keys**. AI Hub does not store the passphrase: if you
   forget it, the keys in that file are lost (everything else can still be imported). The
   file still contains your keys, so keep it private.
+  **Automation settings are never restored from a backup**: Automation (and its tray, start
+  with Windows and webhook options) stays as it is on this PC until you turn it on here.
+  Settings in the file that are not valid are skipped, and the import tells you which.
+- **Automation** — turn the Automation module on or off, tray / start with Windows,
+  notifications, the local webhook server (port and token) and the per-item cost estimates
+  used by spending caps.
 - **About** — version, license and data folder.
 
 ### Keyboard shortcuts

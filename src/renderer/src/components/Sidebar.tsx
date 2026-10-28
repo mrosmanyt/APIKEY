@@ -18,6 +18,7 @@ export function Sidebar() {
   const navigate = useApp((s) => s.navigate)
   const updateSettings = useApp((s) => s.updateSettings)
   const setShortcutsOpen = useApp((s) => s.setShortcutsOpen)
+  const automationOn = useApp((s) => Boolean(s.settings?.automation.enabled))
   const dark = useIsDark()
 
   const item = (p: Page, icon: IconName) => (
@@ -46,6 +47,8 @@ export function Sidebar() {
         <span className="hidden text-base font-bold lg:inline">{t('app.name')}</span>
       </div>
       {ITEMS.map((i) => item(i.page, i.icon))}
+      {/* Optional module: only listed when enabled in Settings › Automation. */}
+      {automationOn && item('automation', 'automation')}
       <div className="mt-auto flex flex-col gap-1">
         <button
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"

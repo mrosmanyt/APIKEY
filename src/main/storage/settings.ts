@@ -19,7 +19,12 @@ export class SettingsStore {
       defaults: { ...(s.defaults ?? {}) },
       providerConfig: { ...(s.providerConfig ?? {}) },
       modelCache: { ...(s.modelCache ?? {}) },
-      voiceCache: { ...(s.voiceCache ?? {}) }
+      voiceCache: { ...(s.voiceCache ?? {}) },
+      automation: {
+        ...DEFAULT_SETTINGS.automation,
+        ...(s.automation ?? {}),
+        unitCosts: { ...DEFAULT_SETTINGS.automation.unitCosts, ...(s.automation?.unitCosts ?? {}) }
+      }
     }
   }
 

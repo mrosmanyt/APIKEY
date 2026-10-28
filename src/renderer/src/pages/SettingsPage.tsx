@@ -3,6 +3,7 @@ import { PageHeader } from '../components/PageHeader'
 import { t, type TranslationKey } from '../i18n'
 import { useApp } from '../lib/store'
 import { AboutTab } from './settings/AboutTab'
+import { AutomationTab } from './settings/AutomationTab'
 import { BackupTab } from './settings/BackupTab'
 import { DefaultsTab } from './settings/DefaultsTab'
 import { GeneralTab } from './settings/GeneralTab'
@@ -17,6 +18,7 @@ const TABS: Array<{ id: string; label: TranslationKey; render: () => ReactNode }
   { id: 'usage', label: 'settings.tabUsage', render: () => <UsageTab /> },
   { id: 'prices', label: 'settings.tabPrices', render: () => <PricesTab /> },
   { id: 'backup', label: 'settings.tabBackup', render: () => <BackupTab /> },
+  { id: 'automation', label: 'settings.tabAutomation', render: () => <AutomationTab /> },
   { id: 'about', label: 'settings.tabAbout', render: () => <AboutTab /> }
 ]
 
