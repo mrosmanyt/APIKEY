@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { languageDir, LANGUAGES, setLanguage, t, tDynamic } from '../src/renderer/src/i18n'
 import { en } from '../src/renderer/src/i18n/en'
 import { ur } from '../src/renderer/src/i18n/ur'
+import { DEFAULT_SETTINGS } from '../src/shared/defaults'
 
 type Tree = { [k: string]: string | Tree }
 
@@ -25,6 +26,24 @@ const UNTRANSLATED = new Set(['app.name', 'license.placeholder', 'settings.techI
 afterEach(() => setLanguage('en'))
 
 describe('Urdu translation', () => {
+  it('has every English key (names the missing ones)', () => {
+    const missing = Object.keys(EN).filter((key) => typeof UR[key] !== 'string')
+    expect(missing, `Missing from ur.ts: ${missing.join(', ')}`).toEqual([])
+  })
+
+  it('translates the Automation screen, including the safety hints', () => {
+    const automationKeys = Object.keys(EN).filter(
+      (k) =>
+        k.startsWith('automation.') || k.startsWith('settings.automation') || k === 'nav.automation'
+    )
+    expect(automationKeys.length).toBeGreaterThan(150)
+    for (const key of automationKeys) expect(UR[key], key).not.toBe(EN[key])
+    // The safety texts mention local services and redirects; the Urdu must say so too.
+    expect(UR['automation.urlHint']).toContain('localhost')
+    expect(UR['automation.urlHint']).toMatch(/ری ڈائریکٹ/)
+    expect(UR['automation.noPermissions']).toMatch(/مقامی سروس/)
+  })
+
   it('has exactly the same keys as English', () => {
     expect(Object.keys(UR).sort()).toEqual(Object.keys(EN).sort())
   })
@@ -57,5 +76,15 @@ describe('Urdu translation', () => {
     expect(tDynamic('missing.key')).toBe('missing.key')
     setLanguage('xx') // unknown language -> English
     expect(t('nav.settings')).toBe('Settings')
+  })
+})
+
+describe('Automation defaults', () => {
+  it('is off by default, with every background feature off too', () => {
+    const a = DEFAULT_SETTINGS.automation
+    expect(a.enabled).toBe(false)
+    expect(a.runInTray).toBe(false)
+    expect(a.startWithWindows).toBe(false)
+    expect(a.webhookEnabled).toBe(false)
   })
 })

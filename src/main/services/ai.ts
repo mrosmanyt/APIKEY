@@ -273,8 +273,9 @@ export class AiService {
       const result = await a.chat!.stream(this.providerContext(req.providerId, signal), req, {
         onDelta: (t) => (text += t)
       })
-      this.app.storage.usage.record(req.providerId, 'chat', { usage: result.usage })
-      return { text, usage: result.usage }
+      const usage = withEstimate(result.usage, req, text)
+      this.app.storage.usage.record(req.providerId, 'chat', { usage, model: req.model })
+      return { text, usage }
     } catch (err) {
       const info = this.toError(err, req.providerId, 'automation chat')
       if (info.kind !== 'cancelled')

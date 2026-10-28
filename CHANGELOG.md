@@ -27,6 +27,8 @@ All notable changes to AI Hub are documented here. The format follows
   max runs per hour.
 - **Background**: optional tray mode, "Start AI Hub with Windows" (off by default) and Windows
   notifications when runs finish or fail.
+- **Urdu** translations for the whole Automation screen and Settings › Automation; a test now
+  names any English key missing from the Urdu file.
 - **Import / export** of workflows as JSON packs (approvals are stripped; imports arrive
   disabled).
 - All provider calls still go through the main process with the encrypted keys; keys never

@@ -43,7 +43,6 @@ export function App() {
   // Pages stay mounted after first visit so streams and form state survive navigation.
   const [visited, setVisited] = useState<Set<Page>>(new Set())
   useIsDark(true)
-  const navigate = useApp((s) => s.navigate)
   const shortcutsOpen = useApp((s) => s.shortcutsOpen)
   const setShortcutsOpen = useApp((s) => s.setShortcutsOpen)
   const licensed = Boolean(license && (license.activated || license.devSkipped))
