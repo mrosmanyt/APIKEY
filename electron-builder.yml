@@ -1,0 +1,31 @@
+appId: com.aihub.desktop
+productName: AI Hub
+copyright: Copyright © 2026 AI Hub
+directories:
+  output: release
+  buildResources: build
+# Only the compiled app is shipped. tools/ (license generator) and src/ are never bundled.
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+asar: true
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: AI-Hub-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: AI Hub
+  uninstallDisplayName: AI Hub
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  deleteAppDataOnUninstall: false

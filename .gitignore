@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+*.log
+.DS_Store
+.env
+# NEVER commit your license signing private key
+keys/
+*.private.pem
+private.pem

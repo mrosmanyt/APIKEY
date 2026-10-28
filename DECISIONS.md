@@ -1,0 +1,114 @@
+# Design decisions
+
+This file records choices made while building AI Hub, and why.
+
+## Stack & tooling
+
+- **electron-vite 2 + Vite 5 + React 18 + TypeScript 5.9 + Tailwind 3.** Chosen over the very
+  newest majors (Vite 8, React 19, TS 7, Tailwind 4) because these versions are mature, well
+  documented and known to work together. Upgrading later is straightforward.
+- **Electron 45** (current stable at build time) for up-to-date Chromium security fixes. Electron
+  45 replaced the old clipboard image API with `clipboard.write([new ClipboardItem(...)])`, which
+  the app uses.
+- **All npm packages are devDependencies.** electron-vite bundles the main, preload and renderer
+  code, so the packaged app ships no `node_modules` at all → small installer, no native modules.
+- **ESLint 9 flat config + Prettier.** CI runs lint, format check, typecheck and tests.
+
+## Storage: JSON files instead of SQLite
+
+`better-sqlite3` is a native module that must be rebuilt for Electron's Node ABI, which
+complicates CI, Vitest (runs under plain Node) and Windows builds. Data volume for a desktop
+chat client is small, so the app uses JSON files in `%APPDATA%\AI Hub\data`:
+
+- atomic writes (temp file + rename) so a crash never leaves a half-written file;
+- corrupt files are renamed to `*.corrupt-<timestamp>` and the app continues with defaults;
+- one file per conversation (`data/conversations/<id>.json`) so large histories stay fast.
+
+Generated media are regular files in the output folder (default `Documents\AI Hub`), with a
+`.json` sidecar next to each image containing its prompt metadata.
+
+## Security
+
+- **Keys** are encrypted with Electron `safeStorage` (Windows DPAPI, tied to the Windows user)
+  and only decrypted in the main process right before a request. The renderer only sees the last
+  four characters (`keyHint`) and the status.
+- If secure storage is unavailable the app refuses to save keys rather than storing them in
+  plain text. (Linux developers can opt in to Chromium's fallback key with
+  `AIHUB_ALLOW_PLAINTEXT_KEYS=1` in dev builds only.)
+- The synchronous `safeStorage` API is marked deprecated in Electron 45 in favour of the async
+  one, but is still fully supported; it is wrapped behind the `Encryptor` interface so switching
+  is a one-file change.
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true`.
+  The preload exposes a fixed list of functions (`window.aihub`), never `ipcRenderer` itself.
+- Every IPC handler validates its arguments with **zod** and checks the sender frame URL.
+- **CSP** is injected into the built `index.html` (no inline scripts, no remote origins). It is
+  not applied to the Vite dev server because React Fast Refresh needs inline scripts.
+- Media is served to the renderer through a custom `aihub-media://<kind>/<id>` protocol that
+  only resolves files referenced by the app's own records — no arbitrary file access.
+- Navigation and `window.open` are blocked; https links open in the system browser.
+- Only microphone (audio-only) and clipboard-write permissions are granted.
+- **Redaction**: every log line and every error that reaches the UI passes through
+  `src/shared/redact.ts`, which removes all registered keys exactly plus anything that looks
+  like a key (provider prefixes, bearer tokens, `x-api-key` headers, `?key=` params, long
+  opaque tokens).
+- Provider HTTP calls use Electron's `net.fetch` (Chromium network stack: honours system proxy
+  and certificate settings, which matters on corporate Windows machines).
+
+## Providers
+
+- One `ProviderAdapter` interface with optional capabilities; the registry turns adapters into
+  serialisable `ProviderInfo` for the UI. The UI has no provider-specific code.
+- A provider is "usable" in the app only when its key has been **tested valid**. A key is
+  tested automatically right after saving. Network/server errors during a test leave the key as
+  "Not tested" rather than "Invalid".
+- Built-in model lists are a starting point; "Refresh" fetches the live list from each API
+  where supported and caches it in settings. Users can also type any model id ("Custom model
+  id…"), so new models work without an app update.
+- OpenAI: newer reasoning models (o-series, GPT-5 family) reject `temperature` and use
+  `max_completion_tokens`; the adapter handles that.
+- Anthropic temperature is clamped to 0–1 (its allowed range).
+- Text/code attachments are inlined into the message text for every provider; images are sent
+  in each provider's native vision format.
+- **Custom OpenAI-compatible provider**: one configurable endpoint (base URL + key + default
+  model + optional display name). Local servers without auth accept any placeholder key.
+- **Retries**: rate limits (429/529) and transient 5xx/network failures are retried up to 3
+  times with exponential backoff + jitter, honouring `Retry-After` (capped at 30 s). Quota /
+  billing errors (often also HTTP 429) are detected from the body and *not* retried. Streaming
+  responses are only retried before the stream starts.
+
+## Video
+
+Generic async job flow in `src/main/services/video.ts` (submit → poll every 5–15 s → download
+into the output folder). Jobs are persisted and resumed after an app restart; timeout 60 min.
+
+- **OpenAI Sora** (`/v1/videos`) and **Google Veo** (`:predictLongRunning`) implemented.
+- **xAI video** is implemented as an *experimental* adapter: its API details could not be
+  verified against official docs while building (no network access to docs.x.ai from the build
+  environment). It is marked `experimental: true`, labelled in the UI, and the uncertain parts
+  are marked `TODO(verify)` in `src/providers/xai/index.ts`.
+- Veo's image-to-video payload shape is also marked `TODO(verify)`.
+- "Stop waiting" stops polling locally; providers do not uniformly support cancelling a job.
+
+## Licensing
+
+- Offline Ed25519 signatures with Node's built-in `crypto` (no dependency). Key format:
+  `AIHUB1.<base64url payload>.<base64url signature>`.
+- The public key is embedded in `src/main/license/publicKey.ts`. The committed key is a
+  **placeholder whose private key was discarded** — the seller must run
+  `npm run license:keypair` once before building a release.
+- The license screen offers "Skip" only in unpackaged development builds.
+- All IPC channels except `app:*` and `license:*` are refused until a license is active.
+
+## Backup
+
+A single JSON file containing settings, conversations, prompts and usage. Keys are only included
+when the user ticks "Include API keys" — they are then in **plain text** (encrypting them with
+DPAPI would make the backup unusable on another PC), and the UI warns about it. Restore merges
+by id and re-encrypts imported keys with safeStorage. Generated media files are not included
+(they are already plain files in the output folder).
+
+## i18n
+
+All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.key')` helper and
+`{placeholder}` interpolation. Adding a language = one new dictionary file + one line in
+`i18n/index.ts`.
