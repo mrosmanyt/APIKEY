@@ -12,10 +12,11 @@ import {
   type IpcMainInvokeEvent
 } from 'electron'
 import { z } from 'zod'
-import { redact } from '@shared/redact'
+import { redact, registerSecret, unregisterSecret } from '@shared/redact'
 import type {
   AppErrorInfo,
   AppInfo,
+  BackupImportPreview,
   Capability,
   IpcResult,
   LicenseStatus,
@@ -25,7 +26,14 @@ import type { InvokeChannel } from '../preload/api-types'
 import { ProviderError } from '../providers/errors'
 import type { LicenseManager } from './license'
 import { conversationToJson, conversationToMarkdown } from './storage/conversations'
-import { createBackup, parseBackup, restoreBackup } from './services/backup'
+import {
+  assertPassphrase,
+  createBackup,
+  parseBackup,
+  restoreBackup,
+  summarizeBackup,
+  type BackupFile
+} from './services/backup'
 import { outputDir, type AppContext } from './services/context'
 import type { AiService } from './services/ai'
 import type { VideoService } from './services/video'
@@ -335,27 +343,71 @@ export function registerIpc(deps: IpcDeps): void {
   })
 
   // ----------------------------------------------------------- backup
-  handle('backup:export', one(z.boolean()), async (includeKeys) => {
-    const stamp = new Date().toISOString().slice(0, 10)
-    const res = await dialog.showSaveDialog(win(), {
-      defaultPath: path.join(app.getPath('documents'), `ai-hub-backup-${stamp}.json`),
-      filters: [{ name: 'AI Hub backup', extensions: ['json'] }]
-    })
-    if (res.canceled || !res.filePath) return null
-    const backup = createBackup(storage, app.getVersion(), includeKeys)
-    await fs.promises.writeFile(res.filePath, JSON.stringify(backup, null, 2), 'utf8')
-    ctx.logger.info(`Backup exported (keys included: ${includeKeys})`)
-    return { filePath: res.filePath, includedKeys: includeKeys }
-  })
-  handle('backup:import', none, async () => {
+  // The passphrase is registered with the redactor while in use so it can never reach a
+  // log line or an error message, and it is never stored.
+  async function withSecret<T>(secret: string | undefined, fn: () => Promise<T>): Promise<T> {
+    registerSecret(secret)
+    try {
+      return await fn()
+    } finally {
+      unregisterSecret(secret)
+    }
+  }
+
+  const zPassphrase = z.string().max(1024).optional()
+
+  handle(
+    'backup:export',
+    one(z.object({ includeKeys: z.boolean(), passphrase: zPassphrase })),
+    ({ includeKeys, passphrase }) =>
+      withSecret(passphrase, async () => {
+        // Validate before showing the save dialog so the user gets the error immediately.
+        if (includeKeys) assertPassphrase(passphrase)
+        const stamp = new Date().toISOString().slice(0, 10)
+        const res = await dialog.showSaveDialog(win(), {
+          defaultPath: path.join(
+            app.getPath('documents'),
+            `ai-hub-backup-${stamp}${includeKeys ? '-with-keys' : ''}.json`
+          ),
+          filters: [{ name: 'AI Hub backup', extensions: ['json'] }]
+        })
+        if (res.canceled || !res.filePath) return null
+        const backup = createBackup(storage, app.getVersion(), { includeKeys, passphrase })
+        await fs.promises.writeFile(res.filePath, JSON.stringify(backup, null, 2), 'utf8')
+        ctx.logger.info(`Backup exported (encrypted keys included: ${includeKeys})`)
+        return { filePath: res.filePath, includedKeys: includeKeys }
+      })
+  )
+
+  /** Backup chosen in the import dialog, waiting for the passphrase step. */
+  let pendingImport: { fileName: string; backup: BackupFile } | undefined
+
+  handle('backup:pickImport', none, async (): Promise<BackupImportPreview | null> => {
     const res = await dialog.showOpenDialog(win(), {
       properties: ['openFile'],
       filters: [{ name: 'AI Hub backup', extensions: ['json'] }]
     })
     if (res.canceled || !res.filePaths[0]) return null
     const text = await fs.promises.readFile(res.filePaths[0], 'utf8')
-    const result = restoreBackup(storage, parseBackup(text))
-    ctx.logger.info('Backup restored', result)
-    return result
+    const backup = parseBackup(text)
+    pendingImport = { fileName: path.basename(res.filePaths[0]), backup }
+    return { fileName: pendingImport.fileName, ...summarizeBackup(backup) }
+  })
+  handle(
+    'backup:import',
+    one(z.object({ passphrase: zPassphrase, skipKeys: z.boolean().optional() })),
+    (opts) =>
+      withSecret(opts.passphrase, async () => {
+        if (!pendingImport) throw new Error('Choose a backup file first.')
+        // On a wrong passphrase this throws before anything is written; the pending file is
+        // kept so the user can try again.
+        const result = restoreBackup(storage, pendingImport.backup, opts)
+        pendingImport = undefined
+        ctx.logger.info('Backup restored', result)
+        return result
+      })
+  )
+  handle('backup:cancelImport', none, () => {
+    pendingImport = undefined
   })
 }

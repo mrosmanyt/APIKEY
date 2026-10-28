@@ -2,6 +2,9 @@ name: Build
 
 on:
   push:
+    branches: ['**']
+    # Pushing a version tag (e.g. v1.0.0) also publishes a GitHub Release with the installer.
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -23,6 +26,19 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
+
+      # ---- Release safety checks (tag builds only) ----
+      - name: Check tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version ($version). Update \"version\" in package.json, commit, and tag again."
+            exit 1
+          fi
+      - name: Check the license public key is not the placeholder
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm run license:check
 
   build-windows:
     name: Windows installer
@@ -48,3 +64,25 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: AI-Hub-Windows-Installer
+          path: dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AI Hub ${{ github.ref_name }}
+          files: dist/*.exe
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          # Tags like v1.1.0-beta.1 are published as pre-releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}

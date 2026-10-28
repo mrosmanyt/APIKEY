@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AppErrorInfo, Capability, ProviderInfo, ProviderStatus } from '@shared/types'
 import { CAPABILITIES } from '@shared/types'
+import { BetaBadge } from '../../components/BetaBadge'
 import { ErrorBox } from '../../components/ErrorBox'
 import { Icon } from '../../components/Icon'
 import { t, tDynamic } from '../../i18n'
@@ -107,10 +108,12 @@ function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: P
               </span>
             ))}
             {provider.capabilities.video?.experimental && (
-              <span className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                {t('settings.cap_video')}: {t('common.experimental')}
-              </span>
+              <BetaBadge label={t('settings.cap_video')} />
             )}
+            {!provider.capabilities.video?.experimental &&
+              provider.capabilities.video?.models.some((m) => m.imageInputBeta) && (
+                <BetaBadge label={t('settings.cap_imageToVideo')} />
+              )}
           </div>
         </div>
         <button

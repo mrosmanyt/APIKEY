@@ -45,10 +45,10 @@ const IMAGE_MODELS: ImageModelInfo[] = [
  * TODO(verify): xAI video generation ("Grok Imagine") API details could not be confirmed
  * against official documentation while building this app. The adapter below follows the
  * same async job pattern as xAI's other endpoints and is flagged `experimental` so the UI
- * labels it clearly. If it fails, check https://docs.x.ai and adjust VIDEO_* below.
+ * labels it "Beta". If it fails, check https://docs.x.ai and adjust VIDEO_* below.
  */
 const VIDEO_MODELS: VideoModelInfo[] = [
-  { id: 'grok-imagine-video', name: 'Grok Imagine Video (experimental)', supportsImageInput: true }
+  { id: 'grok-imagine-video', name: 'Grok Imagine Video (beta)', supportsImageInput: true }
 ]
 const VIDEO_SUBMIT_PATH = '/videos/generations' // TODO(verify)
 const VIDEO_STATUS_PATH = (id: string) => `/videos/${encodeURIComponent(id)}` // TODO(verify)
@@ -64,7 +64,7 @@ interface XaiVideoStatus {
 export const xaiAdapter: ProviderAdapter = {
   id: ID,
   name: 'xAI Grok',
-  description: 'Grok chat models, Grok image generation and (experimental) Grok video.',
+  description: 'Grok chat models, Grok image generation and Grok video (beta).',
   keyUrl: 'https://console.x.ai',
   keyPlaceholder: 'xai-...',
 

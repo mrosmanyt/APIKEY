@@ -7,8 +7,32 @@ companies directly for what you use; AI Hub itself has no subscription and no ac
 ## 1. Install
 
 1. Run **AI-Hub-Setup-x.y.z.exe**.
-2. If Windows shows *"Windows protected your PC"*, click **More info → Run anyway**.
+2. Windows will probably show a blue *"Windows protected your PC"* screen — this is expected,
+   see [Windows SmartScreen warning](#windows-smartscreen-warning) below.
 3. Choose the install folder and finish. Start **AI Hub** from the Start menu or desktop.
+
+### Windows SmartScreen warning
+
+When you run the installer, Windows may show a blue window:
+
+> **Windows protected your PC**
+> Microsoft Defender SmartScreen prevented an unrecognized app from starting.
+
+This appears because the installer is **not digitally code-signed** (code-signing
+certificates are expensive for small developers) and is not yet downloaded by many people. It
+does not mean a virus was found.
+
+To continue:
+
+1. Click the small **More info** link under the message.
+2. The window now shows *App: AI-Hub-Setup-x.y.z.exe* and a **Run anyway** button.
+3. Click **Run anyway**. The installer starts normally.
+
+You only need to do this once per installer. Only do it for an installer you downloaded from
+the seller's official link.
+
+Your browser may also warn while downloading (for example Microsoft Edge: *"…isn't commonly
+downloaded"*). Click **⋯ → Keep → Show more → Keep anyway**. In Chrome click **Keep**.
 
 ## 2. Activate
 
@@ -37,7 +61,7 @@ belong to.
 | **OpenAI** | https://platform.openai.com/api-keys | Add billing credit at platform.openai.com → Billing. Chat, images, voice, transcription, Sora video. |
 | **Anthropic Claude** | https://console.anthropic.com/settings/keys | Buy credits under Plans & Billing. Chat only. |
 | **Google Gemini** | https://aistudio.google.com/app/apikey | Free tier available; some image/video models (Imagen, Veo) need billing enabled. |
-| **xAI Grok** | https://console.x.ai | Chat and images; video support is experimental. |
+| **xAI Grok** | https://console.x.ai | Chat and images; video is in **Beta**. |
 | **ElevenLabs** | https://elevenlabs.io/app/settings/api-keys | Voices (text-to-speech) and transcription. Give the key access to Text to Speech, Voices and Speech to Text. |
 | **Custom (OpenAI-compatible)** | Depends on the service | For OpenRouter (https://openrouter.ai/keys), Groq (https://console.groq.com/keys), DeepSeek (https://platform.deepseek.com/api_keys), Together, Mistral, or local apps like Ollama / LM Studio. |
 
@@ -85,6 +109,8 @@ the prompt or delete.
 
 ### Video
 Write a prompt, optionally choose a start image, size and duration, then **Create video**.
+Features marked **Beta** (xAI video, and starting a Veo video from an image) are new and may
+not work yet with every account.
 Videos take a few minutes; you can use other screens meanwhile — jobs keep running and even
 resume after restarting the app. When done, watch the preview and **Save as…**.
 
@@ -103,8 +129,12 @@ Audio screens.
 - **Usage** — requests, tokens (when the provider reports them), images, audio and videos per
   provider. Counted on your PC only; check the provider's website for exact billing.
 - **Backup** — export settings, conversations, prompts and usage to one file, and import it on
-  another PC. Tick **Include API keys** only if you want keys in the file — they are then
-  stored **unencrypted**, so keep that file safe.
+  another PC. Tick **Include API keys (encrypted)** to also back up your keys: you must choose
+  a **passphrase** (at least 8 characters, typed twice). The keys are encrypted with it; when
+  you import the file, AI Hub asks for the passphrase. A wrong passphrase imports nothing —
+  try again, or choose **Import without keys**. AI Hub does not store the passphrase: if you
+  forget it, the keys in that file are lost (everything else can still be imported). The
+  file still contains your keys, so keep it private.
 - **About** — version, license and data folder.
 
 ## 5. Troubleshooting
@@ -119,6 +149,7 @@ Audio screens.
 | **Blocked by content policy** | The provider refused the request. Rephrase the prompt. |
 | Key shows **Not tested** | The test could not reach the provider; check your connection and click **Test key**. |
 | Microphone does not record | Windows Settings → Privacy & security → Microphone → allow desktop apps. |
+| Backup: **Wrong passphrase** | Type the passphrase used when the backup was exported (it is case-sensitive). If it is lost, use **Import without keys** and re-enter your keys in Settings. |
 | Video stays "Generating" a long time | Normal for some providers (up to several minutes). If it failed, click **Check again**. |
 
 Click **Details** on any error to see the provider's raw message (keys are always removed).

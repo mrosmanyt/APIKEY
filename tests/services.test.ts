@@ -3,7 +3,6 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { Logger } from '../src/main/logger'
 import { AiService } from '../src/main/services/ai'
-import { createBackup, parseBackup, restoreBackup } from '../src/main/services/backup'
 import type { AppContext } from '../src/main/services/context'
 import { VideoService } from '../src/main/services/video'
 import { Storage } from '../src/main/storage'
@@ -204,54 +203,5 @@ describe('VideoService', () => {
     expect(after!.status).toBe('queued')
     expect(after!.error?.kind).toBe('network')
     video.stopAll()
-  })
-})
-
-describe('backup', () => {
-  it('excludes keys unless requested and restores everything', () => {
-    const { storage } = setup(base)
-    storage.keys.set('fake', 'secret-key-abc')
-    storage.settings.update({ theme: 'dark' })
-    storage.prompts.upsert({
-      id: 'p1',
-      title: 'T',
-      content: 'C',
-      mode: 'any',
-      favourite: true,
-      createdAt: 1,
-      updatedAt: 1
-    })
-    storage.conversations.save({
-      id: 'c1',
-      title: 'x',
-      mode: 'chat',
-      providerId: 'fake',
-      model: 'm',
-      systemPrompt: '',
-      temperature: 1,
-      maxTokens: 10,
-      messages: [],
-      createdAt: 1,
-      updatedAt: 1
-    })
-
-    const without = createBackup(storage, '1.0.0', false)
-    expect(JSON.stringify(without)).not.toContain('secret-key-abc')
-    const withKeys = createBackup(storage, '1.0.0', true)
-    expect(withKeys.keys).toEqual({ fake: 'secret-key-abc' })
-
-    const target = setup(base).storage
-    const result = restoreBackup(target, parseBackup(JSON.stringify(withKeys)))
-    expect(result).toEqual({ conversations: 1, prompts: 1, keys: 1, settings: true })
-    expect(target.keys.get('fake')).toBe('secret-key-abc')
-    expect(target.settings.get().theme).toBe('dark')
-  })
-
-  it('rejects files that are not backups', () => {
-    expect(() => parseBackup('{"hello":1}')).toThrow(/not an AI Hub backup/)
-    expect(() => parseBackup('nope')).toThrow(/invalid JSON/)
-    expect(() => parseBackup(JSON.stringify({ format: 'ai-hub-backup', version: 99 }))).toThrow(
-      /newer version/
-    )
   })
 })

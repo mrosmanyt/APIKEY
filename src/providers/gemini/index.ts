@@ -60,19 +60,27 @@ const IMAGE_MODELS: ImageModelInfo[] = [
 ]
 
 const VIDEO_MODELS: VideoModelInfo[] = [
-  { id: 'veo-3.0-generate-001', name: 'Veo 3', sizes: ['16:9', '9:16'], supportsImageInput: true },
+  {
+    id: 'veo-3.0-generate-001',
+    name: 'Veo 3',
+    sizes: ['16:9', '9:16'],
+    supportsImageInput: true,
+    imageInputBeta: true
+  },
   {
     id: 'veo-3.0-fast-generate-001',
     name: 'Veo 3 Fast',
     sizes: ['16:9', '9:16'],
-    supportsImageInput: true
+    supportsImageInput: true,
+    imageInputBeta: true
   },
   {
     id: 'veo-2.0-generate-001',
     name: 'Veo 2',
     sizes: ['16:9', '9:16'],
     durations: [5, 6, 7, 8],
-    supportsImageInput: true
+    supportsImageInput: true,
+    imageInputBeta: true
   }
 ]
 

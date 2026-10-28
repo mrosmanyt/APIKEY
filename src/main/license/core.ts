@@ -1,6 +1,7 @@
 /**
  * Offline license keys: Ed25519 signatures. No Electron imports, so this module is shared by
- * the app (verification) and tools/generate-license.ts (signing).
+ * the app's verification and the tests. tools/license-lib.mjs is a dependency-free copy of the
+ * signing side (kept compatible by tests/license-tools.test.ts).
  *
  * Format:  AIHUB1.<base64url(JSON payload)>.<base64url(signature over the payload segment)>
  */

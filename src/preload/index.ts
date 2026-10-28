@@ -97,8 +97,10 @@ const api: AiHubApi = {
     delete: (id) => invoke('prompts:delete', id)
   },
   backup: {
-    export: (includeKeys) => invoke('backup:export', includeKeys),
-    import: () => invoke('backup:import')
+    export: (includeKeys, passphrase) => invoke('backup:export', { includeKeys, passphrase }),
+    pickImport: () => invoke('backup:pickImport'),
+    import: (opts) => invoke('backup:import', opts),
+    cancelImport: () => invoke('backup:cancelImport')
   }
 }
 

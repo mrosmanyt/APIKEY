@@ -82,6 +82,8 @@ Generic async job flow in `src/main/services/video.ts` (submit → poll every 5�
 into the output folder). Jobs are persisted and resumed after an app restart; timeout 60 min.
 
 - **OpenAI Sora** (`/v1/videos`) and **Google Veo** (`:predictLongRunning`) implemented.
+- Unverified features are labelled **Beta** in the UI: all of xAI video (adapter flag
+  `experimental`) and Veo image-to-video (model flag `imageInputBeta`).
 - **xAI video** is implemented as an *experimental* adapter: its API details could not be
   verified against official docs while building (no network access to docs.x.ai from the build
   environment). It is marked `experimental: true`, labelled in the UI, and the uncertain parts
@@ -91,7 +93,10 @@ into the output folder). Jobs are persisted and resumed after an app restart; ti
 
 ## Licensing
 
-- Offline Ed25519 signatures with Node's built-in `crypto` (no dependency). Key format:
+- Offline Ed25519 signatures with Node's built-in `crypto` (no dependency). The seller's
+  tools (`tools/*.mjs`) are plain JavaScript with only Node built-ins so they run on a
+  Windows PC with just Node installed (no `npm install`, no Electron download, no TS
+  runner). `tests/license-tools.test.ts` keeps them compatible with the TS verifier. Key format:
   `AIHUB1.<base64url payload>.<base64url signature>`.
 - The public key is embedded in `src/main/license/publicKey.ts`. The committed key is a
   **placeholder whose private key was discarded** — the seller must run
@@ -101,11 +106,27 @@ into the output folder). Jobs are persisted and resumed after an app restart; ti
 
 ## Backup
 
-A single JSON file containing settings, conversations, prompts and usage. Keys are only included
-when the user ticks "Include API keys" — they are then in **plain text** (encrypting them with
-DPAPI would make the backup unusable on another PC), and the UI warns about it. Restore merges
-by id and re-encrypts imported keys with safeStorage. Generated media files are not included
-(they are already plain files in the output folder).
+A single JSON file (format version 2) containing settings, conversations, prompts and usage.
+Generated media files are not included (they are already plain files in the output folder).
+
+API keys are only included when the user ticks "Include API keys", and then **always
+encrypted** with a passphrase they choose (min. 8 characters, entered twice):
+
+- Key derivation: `scrypt` (N=2^15, r=8, p=1), random 16-byte salt → 32-byte key. The cost
+  parameters are stored in the file so they can be raised later; on import, absurd values
+  from a tampered file are refused (memory-exhaustion guard).
+- Encryption: AES-256-GCM, random 12-byte IV, 16-byte auth tag, the format name as
+  additional authenticated data. The file stores `{kdf, N, r, p, cipher, salt, iv, authTag,
+  ciphertext}` — never the plain keys.
+- Why not DPAPI? A DPAPI-encrypted backup could only be restored by the same Windows user on
+  the same PC, which defeats the purpose of moving to a new PC.
+- Import is two steps (pick file → preview → passphrase). Keys are decrypted *before* anything
+  is written, so a wrong passphrase (GCM authentication failure) changes nothing and the user
+  can retry or choose "Import without keys". Restored keys are tested automatically.
+- The passphrase is registered with the redactor for the duration of the IPC call so it can
+  never appear in a log line or error, and is never stored. It travels renderer → main over
+  IPC once, like an API key does when first saved.
+- Legacy v1 files (plain keys, only produced by pre-release builds) can still be imported.
 
 ## i18n
 
@@ -129,3 +150,14 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
   `AIHUB_MOCK_PROVIDER=1` in unpackaged builds. It was used to verify every screen end-to-end
   during development and is never registered in packaged builds.
 - `AIHUB_USER_DATA_DIR` overrides the data folder (used for automated UI checks).
+
+## Releases
+
+- Every push builds an installer artifact (30-day retention). Pushing a `v*` tag additionally
+  publishes a GitHub Release via `softprops/action-gh-release` (assets never expire). Only the
+  release job gets `contents: write`.
+- Tag builds fail early if the tag doesn't match `package.json` (the installer file name uses
+  that version) or if the license public key is still the placeholder (a release that nobody
+  can license would be useless).
+- `.gitattributes` forces LF so a Windows checkout (Git's `core.autocrlf`) can't produce CRLF
+  files that fail the Prettier check in CI.

@@ -21,6 +21,7 @@ const ERROR_KINDS = [
   'not_configured',
   'unsupported',
   'invalid_license',
+  'invalid_passphrase',
   'unknown'
 ] as const
 
