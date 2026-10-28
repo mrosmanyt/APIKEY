@@ -40,6 +40,22 @@ describe('provider registry', () => {
     expect(infos.find((i) => i.id === 'xai')!.capabilities.video!.experimental).toBe(true)
   })
 
+  it('flags beta video features for the UI', () => {
+    const infos = registry.listInfo()
+    const video = (id: string) => infos.find((i) => i.id === id)!.capabilities.video!
+    // xAI video as a whole is beta.
+    expect(video('xai').experimental).toBe(true)
+    expect(video('xai').models.every((m) => /beta/i.test(m.name ?? ''))).toBe(true)
+    // Veo: video is verified, image-to-video is beta on every model that accepts an image.
+    expect(video('gemini').experimental).toBeFalsy()
+    const veo = video('gemini').models.filter((m) => m.supportsImageInput)
+    expect(veo.length).toBeGreaterThan(0)
+    expect(veo.every((m) => m.imageInputBeta)).toBe(true)
+    // OpenAI Sora is not beta.
+    expect(video('openai').experimental).toBeFalsy()
+    expect(video('openai').models.some((m) => m.imageInputBeta)).toBe(false)
+  })
+
   it('injects the configured custom model and display name', () => {
     const info = registry.info('custom', { model: 'deepseek-chat', displayName: 'DeepSeek' })!
     expect(info.name).toBe('DeepSeek')

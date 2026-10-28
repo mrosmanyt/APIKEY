@@ -44,7 +44,7 @@ export const en = {
     use: 'Use',
     rename: 'Rename',
     search: 'Search…',
-    experimental: 'Experimental',
+    beta: 'Beta',
     savedTo: 'Saved to {path}',
     retry: 'Retry',
     refreshModels: 'Refresh model list from the provider',
@@ -72,6 +72,7 @@ export const en = {
     not_configured: 'Not set up yet',
     unsupported: 'Not supported',
     invalid_license: 'License not accepted',
+    invalid_passphrase: 'Passphrase problem',
     unknown: 'Unexpected error',
     hint_invalid_key:
       'Check the key in Settings › API Keys, or create a new one on the provider website.',
@@ -207,7 +208,8 @@ export const en = {
     status_cancelled: 'Cancelled',
     cancel: 'Stop waiting',
     retry: 'Check again',
-    experimentalNote: 'This provider’s video API is experimental in AI Hub and may not work yet.',
+    betaNote: 'Video for this provider is in beta in AI Hub and may not work yet.',
+    imageBetaNote: 'Image-to-video for this model is in beta and may not work yet.',
     note: 'Video generation can take several minutes. You can leave this screen; jobs keep running.'
   },
   prompts: {
@@ -258,6 +260,7 @@ export const en = {
     cap_video: 'Video',
     cap_tts: 'Text to speech',
     cap_stt: 'Speech to text',
+    cap_imageToVideo: 'Image-to-video',
     saveConfig: 'Save configuration',
     configSaved: 'Configuration saved',
     defaultsIntro: 'Choose the provider and model selected by default on each screen.',
@@ -295,15 +298,32 @@ export const en = {
     resetUsageConfirm: 'Reset all usage statistics?',
     backupIntro:
       'Export settings, conversations, prompts and usage to one file, or restore from a backup.',
-    includeKeys: 'Include API keys',
+    includeKeys: 'Include API keys (encrypted)',
+    includeKeysHint:
+      'Keys are encrypted with a passphrase you choose. Without the passphrase they cannot be restored.',
     includeKeysWarning:
-      'Keys will be stored UNENCRYPTED in the backup file. Keep it somewhere safe.',
+      'This backup file contains your API keys. They are encrypted with your passphrase, but anyone who gets the file and the passphrase can use your keys and spend your credit. Keep the file private and use a strong passphrase.',
+    passphrase: 'Passphrase',
+    passphraseConfirm: 'Repeat passphrase',
+    passphraseTooShort: 'Use at least {min} characters.',
+    passphraseMismatch: 'The passphrases do not match.',
+    passphraseHint:
+      'AI Hub does not store this passphrase. If you forget it, the keys in this backup cannot be recovered.',
+    exportHeading: 'Export',
+    importHeading: 'Import',
     exportBackup: 'Export backup…',
     importBackup: 'Import backup…',
     exported: 'Backup saved to {path}',
+    exportedWithKeys:
+      'Backup saved to {path}. This file contains your encrypted API keys — keep it private.',
     imported: 'Restored {conversations} conversations, {prompts} prompts and {keys} keys.',
+    importTitle: 'Import backup',
+    importContains: '{conversations} conversations and {prompts} saved prompts.',
+    importNow: 'Import',
+    importWithoutKeys: 'Import without keys',
+    importPassphraseHint: 'Enter the passphrase that was used when this backup was exported.',
     importConfirm:
-      'Importing merges the backup into your current data and overwrites settings. Continue?',
+      'Importing merges the backup into your current data and overwrites your settings.',
     about: 'About',
     version: 'Version {version}',
     licensedTo: 'Licensed to {name}',

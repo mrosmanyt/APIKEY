@@ -28,6 +28,8 @@ export interface VideoModelInfo extends ModelInfo {
   sizes?: string[]
   durations?: number[]
   supportsImageInput: boolean
+  /** Image-to-video works but is not fully verified: shown with a "Beta" label. */
+  imageInputBeta?: boolean
 }
 
 export interface VoiceInfo {
@@ -57,6 +59,7 @@ export interface ProviderInfo {
   capabilities: {
     chat?: { models: ModelInfo[] }
     image?: { models: ImageModelInfo[] }
+    /** experimental = the whole video capability is shown as "Beta". */
     video?: { models: VideoModelInfo[]; experimental?: boolean }
     tts?: { models: ModelInfo[]; voices: VoiceInfo[]; canListVoices: boolean }
     stt?: { models: ModelInfo[] }
@@ -89,6 +92,7 @@ export type ErrorKind =
   | 'not_configured'
   | 'unsupported'
   | 'invalid_license'
+  | 'invalid_passphrase'
   | 'unknown'
 
 export interface AppErrorInfo {
@@ -353,6 +357,16 @@ export interface AppInfo {
 export interface BackupResult {
   filePath: string
   includedKeys: boolean
+}
+
+export interface BackupImportPreview {
+  fileName: string
+  conversations: number
+  prompts: number
+  /** The backup contains API keys. */
+  hasKeys: boolean
+  /** The keys are encrypted and a passphrase is required to restore them. */
+  needsPassphrase: boolean
 }
 
 export interface RestoreResult {

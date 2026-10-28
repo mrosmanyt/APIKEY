@@ -6,6 +6,7 @@
 import type {
   AppInfo,
   AudioRecord,
+  BackupImportPreview,
   BackupResult,
   Capability,
   ChatRequest,
@@ -114,8 +115,13 @@ export interface AiHubApi {
     delete(id: string): R<void>
   }
   backup: {
-    export(includeKeys: boolean): R<BackupResult | null>
-    import(): R<RestoreResult | null>
+    /** includeKeys requires a passphrase (min 8 chars); keys are encrypted with it. */
+    export(includeKeys: boolean, passphrase?: string): R<BackupResult | null>
+    /** Step 1: choose a file. Returns what it contains (null if cancelled). */
+    pickImport(): R<BackupImportPreview | null>
+    /** Step 2: restore the chosen file. Fails with 'invalid_passphrase' on a wrong passphrase. */
+    import(opts: { passphrase?: string; skipKeys?: boolean }): R<RestoreResult>
+    cancelImport(): R<void>
   }
 }
 
@@ -174,7 +180,9 @@ export const INVOKE_CHANNELS = [
   'prompts:save',
   'prompts:delete',
   'backup:export',
-  'backup:import'
+  'backup:pickImport',
+  'backup:import',
+  'backup:cancelImport'
 ] as const
 
 export type InvokeChannel = (typeof INVOKE_CHANNELS)[number]

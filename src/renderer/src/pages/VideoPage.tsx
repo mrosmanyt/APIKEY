@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppErrorInfo, VideoJob, VideoModelInfo } from '@shared/types'
+import { BetaBadge } from '../components/BetaBadge'
 import { ErrorBox } from '../components/ErrorBox'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
@@ -32,6 +33,7 @@ export function VideoPage() {
   const durations = useMemo(() => model?.durations ?? [], [model])
   const supportsImage = model?.supportsImageInput ?? fallback?.supportsImageInput ?? false
   const experimental = provider?.capabilities.video?.experimental
+  const imageBeta = model?.imageInputBeta ?? fallback?.imageInputBeta ?? false
 
   const [prompt, setPrompt] = useState('')
   const [size, setSize] = useState('')
@@ -112,8 +114,7 @@ export function VideoPage() {
           <ProviderModelPicker capability="video" value={sel} onChange={setSel} />
           {experimental && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-              <span className="font-semibold">{t('common.experimental')}:</span>{' '}
-              {t('video.experimentalNote')}
+              <BetaBadge /> {t('video.betaNote')}
             </div>
           )}
           <div>
@@ -130,7 +131,15 @@ export function VideoPage() {
           </div>
           {supportsImage && (
             <div>
-              <label className="label">{t('video.image')}</label>
+              <div className="mb-1 flex items-center gap-2">
+                <label className="label mb-0">{t('video.image')}</label>
+                {(imageBeta || experimental) && <BetaBadge />}
+              </div>
+              {imageBeta && !experimental && (
+                <p className="mb-2 text-xs text-amber-700 dark:text-amber-300">
+                  {t('video.imageBetaNote')}
+                </p>
+              )}
               <input
                 ref={fileRef}
                 type="file"

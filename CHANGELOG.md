@@ -3,6 +3,28 @@
 All notable changes to AI Hub are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses semantic versioning.
 
+## [Unreleased]
+
+### Security
+- Backups no longer store API keys in plain text. "Include API keys" now requires a
+  passphrase (min. 8 characters); keys are encrypted with scrypt (random 16-byte salt) +
+  AES-256-GCM (random 12-byte IV). Import asks for the passphrase, reports a wrong
+  passphrase clearly without changing any data, and can import everything except the keys.
+  Passphrases and keys are never logged. Backup format version 2.
+
+### Changed
+- License tools are now dependency-free Node scripts (`tools/*.mjs`): they run on Windows
+  with only Node.js installed. `license:generate` asks questions when run without options.
+  New `npm run license:check`.
+- xAI video and Veo image-to-video are labelled **Beta** in the UI.
+
+### Added
+- `LICENSE_SETUP.md` step-by-step guide for the seller.
+- USER_GUIDE section on the Windows SmartScreen warning for the unsigned installer.
+- Pushing a `v*` tag publishes a GitHub Release with the installer attached (after checking
+  the tag matches `package.json` and the license key is not the placeholder).
+- `.gitattributes` forcing LF line endings so Windows checkouts pass the format check.
+
 ## [1.0.0] — 2026-10-28
 
 ### Added

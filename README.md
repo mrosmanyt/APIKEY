@@ -12,8 +12,8 @@ speech-to-text and coding — from one clean interface.
 | --- | :-: | :-: | :-: | :-: | :-: |
 | OpenAI | ✅ | ✅ GPT Image / DALL·E | ✅ Sora | ✅ | ✅ Whisper / GPT-4o Transcribe |
 | Anthropic Claude | ✅ | | | | |
-| Google Gemini | ✅ | ✅ Gemini Image / Imagen | ✅ Veo | | |
-| xAI Grok | ✅ | ✅ | ⚠️ experimental | | |
+| Google Gemini | ✅ | ✅ Gemini Image / Imagen | ✅ Veo (image-to-video: Beta) | | |
+| xAI Grok | ✅ | ✅ | ✅ Beta | | |
 | ElevenLabs | | | | ✅ | ✅ Scribe |
 | Custom OpenAI-compatible (OpenRouter, Groq, DeepSeek, Ollama, LM Studio…) | ✅ | | | | |
 
@@ -57,7 +57,8 @@ Useful scripts:
 | `npm run build` | Typecheck and compile to `out/` |
 | `npm run build:win` | Build the Windows NSIS installer into `release/` |
 | `npm run license:keypair` | Create your license signing keypair (once) |
-| `npm run license:generate -- --name "…"` | Create a license key for a buyer |
+| `npm run license:generate` | Create a license key for a buyer (asks questions) |
+| `npm run license:check` | Fail if the app still has the placeholder license key |
 
 Development conveniences (unpackaged builds only):
 
@@ -94,8 +95,23 @@ The installer is written to `release/AI-Hub-Setup-<version>.exe`.
 
 **GitHub Actions:** every push runs `.github/workflows/build.yml`: lint, format check,
 typecheck and tests on Ubuntu, then builds the installer on `windows-latest` and uploads it
-as the **AI-Hub-Windows-Installer** artifact. Download it from the repository's **Actions**
-tab → pick a run → **Artifacts** section.
+as the **AI-Hub-Windows-Installer** artifact (kept 30 days). Download it from the
+repository's **Actions** tab → pick a run → **Artifacts** section.
+
+**Releases (permanent downloads):** push a tag named `v` + the `package.json` version:
+
+```bash
+git tag v1.0.0
+```
+
+```bash
+git push origin v1.0.0
+```
+
+The workflow then also checks that the tag matches `package.json` and that the license public
+key is not the placeholder, builds the installer and publishes a **GitHub Release** with
+`AI-Hub-Setup-<version>.exe` attached (tags containing `-`, e.g. `v1.1.0-beta.1`, become
+pre-releases). Release assets do not expire.
 
 The installer is not code-signed; Windows SmartScreen will show "Windows protected your PC"
 → *More info* → *Run anyway*. To sign, buy a code-signing certificate and set the standard
@@ -110,37 +126,29 @@ Change the app name, version and icon in:
 
 ## License keys (selling the app)
 
+**Step-by-step guide for Windows: [LICENSE_SETUP.md](LICENSE_SETUP.md).**
+
 AI Hub verifies licenses **offline**: a license key is a small JSON payload (name, email,
 id, issue date, optional expiry) signed with your **Ed25519 private key**. The app only
 contains the **public key**, so nobody can create keys without your private key.
 
-1. **Create your keypair (once):**
+The tools in `tools/*.mjs` are plain JavaScript using only Node.js built-ins — they run with
+just Node installed (no `npm install`), on Windows, macOS or Linux:
 
-   ```bash
-   npm run license:keypair
-   ```
-
-   This writes `keys/license-private.pem` (git-ignored — **back it up somewhere safe and
-   never share or commit it**) and embeds the matching public key in
-   `src/main/license/publicKey.ts`. Commit that file change.
-
-   > The repository ships with a placeholder public key whose private key was destroyed —
-   > you **must** run this step before your first release, otherwise no license will work.
-
-2. **Rebuild** the app (`npm run build:win` or push to GitHub).
-
-3. **Create a key for each buyer:**
-
-   ```bash
-   npm run license:generate -- --name "Jane Doe" --email jane@example.com --id ORDER-1001
-   ```
-
-   Optional: `--expires 2027-12-31`, `--key path/to/private.pem`. The key (starting with
-   `AIHUB1.`) is printed; send it to the buyer. A record is appended to
+1. `npm run license:keypair` (once) — writes `keys/license-private.pem` (git-ignored; back it
+   up, never commit it) and embeds the public key in `src/main/license/publicKey.ts`, which
+   you commit.
+2. `npm run license:generate` — prompts for buyer name/email/order id/expiry and prints the
+   `AIHUB1.…` key; or pass `-- --name "Jane Doe" --email jane@example.com --id ORDER-1001`
+   (`--expires 2027-12-31`, `--key path/to/private.pem` optional). Every key is logged in
    `keys/issued-licenses.csv`.
 
-If you ever regenerate the keypair (`--force`), keys issued with the old private key will no
-longer work in new builds.
+> The repository ships with a placeholder public key whose private key was destroyed. Tag
+> builds refuse to publish a release until you have replaced it (`npm run license:check`).
+
+`tools/license-lib.mjs` must stay compatible with the app's verifier
+(`src/main/license/core.ts`); `tests/license-tools.test.ts` runs the CLIs with plain `node`
+and verifies their keys with the app code.
 
 ## Adding a new provider
 
@@ -186,10 +194,12 @@ and redaction for free. Throw `ProviderError` for provider-specific failures.
 See [DECISIONS.md](DECISIONS.md) for details. In short: keys encrypted with DPAPI and used
 only in the main process; `contextIsolation`, `sandbox`, no `nodeIntegration`; a strict
 preload API; zod validation on every IPC call; CSP; navigation blocked; secret redaction in
-logs and errors.
+logs and errors; backups only contain API keys encrypted with a user passphrase
+(scrypt + AES-256-GCM).
 
 ## Documentation
 
 - [USER_GUIDE.md](USER_GUIDE.md) — guide for buyers
+- [LICENSE_SETUP.md](LICENSE_SETUP.md) — creating your license keys (seller)
 - [DECISIONS.md](DECISIONS.md) — design decisions
 - [CHANGELOG.md](CHANGELOG.md)
