@@ -4,7 +4,9 @@ import { CopyButton } from '../../components/CopyButton'
 import { ErrorBox } from '../../components/ErrorBox'
 import { Icon } from '../../components/Icon'
 import { Markdown } from '../../components/Markdown'
+import { formatUsd } from '@shared/pricing'
 import { t } from '../../i18n'
+import { useMessageCost } from '../../lib/cost'
 
 export function MessageView({
   message,
@@ -24,6 +26,7 @@ export function MessageView({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.content)
   const isUser = message.role === 'user'
+  const cost = useMessageCost(message.providerId, message.model, message.usage)
 
   return (
     <div className={`group flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -91,7 +94,9 @@ export function MessageView({
               </div>
             </div>
           ) : isUser ? (
-            <div className="whitespace-pre-wrap break-words text-sm">{message.content}</div>
+            <div className="whitespace-pre-wrap break-words text-sm" dir="auto">
+              {message.content}
+            </div>
           ) : message.content ? (
             <Markdown text={message.content} />
           ) : streaming ? (
@@ -134,13 +139,22 @@ export function MessageView({
             )}
             {!isUser && message.model && <span className="px-1">{message.model}</span>}
             {message.usage && (message.usage.inputTokens || message.usage.outputTokens) ? (
-              <span className="px-1">
+              <span
+                className="px-1"
+                title={message.usage.estimated ? t('chat.tokensEstimated') : undefined}
+              >
+                {message.usage.estimated ? '≈ ' : ''}
                 {t('chat.tokens', {
                   input: message.usage.inputTokens ?? '–',
                   output: message.usage.outputTokens ?? '–'
                 })}
               </span>
             ) : null}
+            {cost !== undefined && (
+              <span className="px-1" title={t('chat.costHint')}>
+                ≈ {formatUsd(cost)}
+              </span>
+            )}
           </div>
         )}
       </div>

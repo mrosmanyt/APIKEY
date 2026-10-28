@@ -120,7 +120,65 @@ export const en = {
     saveToFile: 'Save to file',
     insertPrompt: 'Insert saved prompt',
     untitled: 'New conversation',
-    stopped: 'Stopped'
+    stopped: 'Stopped',
+    attachmentTruncated: '{name} is very long — only the first part was attached.',
+    pages: '{count} pages',
+    approxTokens: '≈{tokens} tokens',
+    truncated: 'truncated',
+    tooLarge:
+      'These attachments are about {tokens} tokens — more than this model can read at once ({limit}). Remove some files or choose a model with a larger context window.',
+    tooLargeUnknown:
+      'These attachments are about {tokens} tokens. That is probably too much for this model (typical limit {limit}). Remove some files or choose a model with a larger context window.',
+    contextUse: 'Attachments use about {tokens} of {limit} tokens.',
+    tokensEstimated: 'Estimated locally — the provider did not report token counts.',
+    costHint: 'Estimated cost from your price table (Settings › Prices).'
+  },
+  enhance: {
+    button: 'Enhance',
+    working: 'Enhancing…',
+    tooltip: 'Rewrite into a detailed prompt with {model}',
+    noModel: 'Add a chat provider key to use the prompt enhancer',
+    undo: 'Undo'
+  },
+  onboarding: {
+    title: 'Welcome to AI Hub',
+    stepOf: 'Step {n} of {total}',
+    welcomeTitle: 'Your AI providers, one app',
+    welcomeBody:
+      'AI Hub uses your own API keys. You pay each AI company directly for what you use — there is no AI Hub account or subscription.',
+    privacy1: 'Keys are encrypted with your Windows account and stay on this PC.',
+    privacy2: 'Your chats, images and files are saved only on this PC.',
+    privacy3: 'You can add, test or remove keys any time in Settings › API Keys.',
+    keysTitle: 'Add at least one API key',
+    keysBody:
+      'Click "Get a key" to open the provider’s website, create a key, paste it here and save. AI Hub tests it straight away.',
+    tipFree:
+      'Tip: Google Gemini and Groq have free tiers, and Ollama runs models on this PC for free.',
+    showAll: 'Show all providers',
+    showFewer: 'Show fewer',
+    testTitle: 'Test your keys',
+    testBody:
+      'Make sure every key you added is valid. Invalid keys show the provider’s exact message.',
+    testAll: 'Test all keys',
+    noKeysYet: 'You have not added a key yet. Go back to add one, or finish and add keys later.',
+    readyCount: '{count} of {total} providers are ready to use.',
+    back: 'Back',
+    next: 'Next',
+    skip: 'Skip setup',
+    finish: 'Start using AI Hub'
+  },
+  shortcuts: {
+    title: 'Keyboard shortcuts',
+    button: 'Keyboard shortcuts',
+    newChat: 'New chat (Chat and Code)',
+    send: 'Send message',
+    newline: 'New line in the message box',
+    stop: 'Stop generating',
+    focusInput: 'Focus the message box',
+    goTo: 'Go to {screen}',
+    settings: 'Open Settings',
+    help: 'Show this list',
+    close: 'Close dialogs'
   },
   compare: {
     title: 'Compare models',
@@ -159,6 +217,23 @@ export const en = {
     reapplyPrompt: 'Reuse prompt',
     copiedImage: 'Image copied to clipboard',
     reusePrompt: 'Reuse prompt',
+    reference: 'Reference image (optional)',
+    uploadReference: 'Upload reference image',
+    removeReference: 'Remove',
+    useAsReference: 'Use as reference',
+    strength: 'Change strength',
+    strengthHint:
+      'Low = stay close to the reference, high = more freedom. Not every provider uses this.',
+    referenceUnsupported:
+      'This model ignores reference images. Models that support them: {models}.',
+    referenceUnsupportedProvider:
+      'This provider does not support reference images. Try OpenAI GPT Image, Gemini Flash Image or Stability AI.',
+    upscale: 'Upscale',
+    variations: 'Variations',
+    chooseToolProvider: 'Choose which provider to use:',
+    op_reference: 'From reference',
+    op_upscale: 'Upscaled',
+    op_variation: 'Variation',
     revised: 'Revised prompt'
   },
   audio: {
@@ -236,6 +311,7 @@ export const en = {
     tabDefaults: 'Defaults',
     tabGeneral: 'General',
     tabUsage: 'Usage',
+    tabPrices: 'Prices',
     tabBackup: 'Backup',
     tabAbout: 'About',
     keysIntro:
@@ -262,6 +338,11 @@ export const en = {
     cap_stt: 'Speech to text',
     cap_imageToVideo: 'Image-to-video',
     saveConfig: 'Save configuration',
+    noKeyNeeded: 'No API key needed — runs on this PC.',
+    testConnection: 'Test connection',
+    disconnect: 'Disconnect',
+    runWizard: 'Run the setup wizard again',
+    wizard: 'Setup wizard',
     configSaved: 'Configuration saved',
     defaultsIntro: 'Choose the provider and model selected by default on each screen.',
     mode_chat: 'Chat',
@@ -270,6 +351,7 @@ export const en = {
     mode_video: 'Video',
     mode_tts: 'Text to speech',
     mode_stt: 'Speech to text',
+    mode_enhance: 'Prompt enhancer',
     theme: 'Theme',
     theme_system: 'System',
     theme_light: 'Light',
@@ -295,6 +377,30 @@ export const en = {
     lastUsed: 'Last used',
     noUsage: 'No usage recorded yet.',
     resetUsage: 'Reset usage',
+    monthlyCost: 'Estimated cost by month',
+    month: 'Month',
+    costDisclaimer:
+      'Estimates from token counts and your price table. Your provider’s bill is the real amount (it may include taxes, images, audio and other fees).',
+    noUsageMonth: 'No chat usage recorded this month.',
+    estCost: 'Est. cost',
+    noPrice: 'no price',
+    total: 'Total',
+    unpricedNote: 'Some models have no price yet, so the total is incomplete.',
+    editPrices: 'Edit prices',
+    estimatedNote:
+      'Some token counts were estimated (~4 characters per token) because the provider did not report them.',
+    allTime: 'All-time totals',
+    pricesIntro:
+      'Prices in US dollars per 1 million tokens, used for cost estimates. The defaults are approximate list prices — check your provider’s pricing page and edit them here.',
+    addPrice: 'Add price',
+    resetPrices: 'Reset to defaults',
+    resetPricesConfirm: 'Replace your price table with the defaults?',
+    pricesSaved: 'Prices saved',
+    modelPattern: 'Model',
+    inputPrice: 'Input $ / 1M',
+    outputPrice: 'Output $ / 1M',
+    pricesHint:
+      'Model: exact id, a prefix ending in * (e.g. gpt-4o*), or * for every model of that provider. The most specific match wins. OpenRouter prices are filled in automatically when you refresh its model list.',
     resetUsageConfirm: 'Reset all usage statistics?',
     backupIntro:
       'Export settings, conversations, prompts and usage to one file, or restore from a backup.',

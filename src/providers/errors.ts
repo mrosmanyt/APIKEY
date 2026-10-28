@@ -51,6 +51,7 @@ export function extractProviderMessage(body: string): string | undefined {
         return (
           pick(o.message) ??
           pick(o.error) ??
+          pick(o.errors) ??
           pick(o.detail) ??
           pick(o.msg) ??
           (typeof o.status === 'string' ? o.status : undefined)
@@ -89,8 +90,8 @@ export function classifyHttpError(
   if (status === 402 || RE_QUOTA.test(text)) kind = 'quota'
   else if (status === 401 || RE_INVALID_KEY.test(text)) kind = 'invalid_key'
   else if (status === 429 || status === 529 || RE_RATE.test(text)) kind = 'rate_limit'
-  else if (status === 403) kind = 'invalid_key'
   else if (RE_POLICY.test(text)) kind = 'content_policy'
+  else if (status === 403) kind = 'invalid_key'
   else if (status === 404 || RE_MODEL.test(text)) kind = 'model_not_found'
   else if (status >= 500) kind = 'server'
   else if (status >= 400) kind = 'bad_request'

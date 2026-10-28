@@ -17,8 +17,36 @@ All notable changes to AI Hub are documented here. The format follows
   with only Node.js installed. `license:generate` asks questions when run without options.
   New `npm run license:check`.
 - xAI video and Veo image-to-video are labelled **Beta** in the UI.
+- Stability AI moderation errors (HTTP 403) are reported as content-policy refusals, not as an
+  invalid key.
+- Backups also include the monthly usage used for cost estimates.
 
 ### Added
+- **New providers:** OpenRouter (live model prices), Groq (chat + Whisper speech-to-text),
+  DeepSeek, Mistral AI, Ollama (local models, no key — "Test connection") and Stability AI
+  (Stable Image Ultra/Core, SD 3.5). Unverified endpoints are marked `TODO(verify)` and,
+  where user-visible, labelled **Beta** (Stability upscaling, Stable Image Ultra
+  image-to-image).
+- **Cost estimates:** approximate cost on every chat answer, monthly cost per provider and per
+  model in Settings › Usage, and an editable price table (USD per 1M tokens, wildcard model
+  patterns) in Settings › Prices. Token counts are estimated locally when a provider reports
+  none.
+- **Chat with files:** attach PDF, DOCX and TXT files; text is extracted locally (page
+  numbers kept for PDFs) and sent as context, with a warning when attachments are too large
+  for the selected model's context window.
+- **Image tools:** "Use as reference" / upload a reference image for image-to-image (OpenAI
+  GPT Image, Gemini Flash Image, Stability), **Upscale** (Stability, Beta) and **Variations**
+  (OpenAI DALL·E 2).
+- **Prompt enhancer:** an "Enhance" button on Chat, Images and Video rewrites a short prompt
+  into a detailed one with your chat model (with Undo). New default "Prompt enhancer" model in
+  Settings › Defaults.
+- **Setup wizard** after license activation: welcome, add keys with links to each provider's
+  key page, and a "Test key" step. Can be re-run from Settings › General.
+- **Urdu (اردو)** user interface with a full right-to-left layout, selectable in Settings ›
+  General › Language.
+- **Keyboard shortcuts** (Ctrl+N new chat, Enter send, Esc stop, Ctrl+1…8 screens, Ctrl+L,
+  Ctrl+,) and a shortcuts help screen (Ctrl+/ or F1, or the sidebar button).
+- Model context-window sizes for the built-in chat models.
 - `LICENSE_SETUP.md` step-by-step guide for the seller.
 - USER_GUIDE section on the Windows SmartScreen warning for the unsigned installer.
 - Pushing a `v*` tag publishes a GitHub Release with the installer attached (after checking

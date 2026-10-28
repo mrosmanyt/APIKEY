@@ -15,7 +15,13 @@ speech-to-text and coding — from one clean interface.
 | Google Gemini | ✅ | ✅ Gemini Image / Imagen | ✅ Veo (image-to-video: Beta) | | |
 | xAI Grok | ✅ | ✅ | ✅ Beta | | |
 | ElevenLabs | | | | ✅ | ✅ Scribe |
-| Custom OpenAI-compatible (OpenRouter, Groq, DeepSeek, Ollama, LM Studio…) | ✅ | | | | |
+| Stability AI | | ✅ Stable Image / SD 3.5 (+ image-to-image, upscale Beta) | | | |
+| OpenRouter | ✅ (live prices) | | | | |
+| Groq | ✅ | | | | ✅ Whisper |
+| DeepSeek | ✅ | | | | |
+| Mistral AI | ✅ | | | | |
+| Ollama (local, no key) | ✅ | | | | |
+| Custom OpenAI-compatible (LM Studio, vLLM, Together…) | ✅ | | | | |
 
 ## Features
 
@@ -28,6 +34,11 @@ speech-to-text and coding — from one clean interface.
 - **Audio** — text-to-speech (voices, playback, save MP3) and speech-to-text (upload or record).
 - **Video** — async jobs: submit → progress → preview → save; job history survives restarts.
 - **History** — search, rename, delete, export to Markdown/JSON.
+- **Chat with files** — PDF/DOCX/TXT text extracted locally (`unpdf`, `mammoth`), with a
+  context-window warning.
+- **Cost estimates** — per message and per month, from an editable price table.
+- **Image tools** — reference images (image-to-image), upscale, variations.
+- **Prompt enhancer**, **setup wizard**, **Urdu UI (RTL)** and **keyboard shortcuts**.
 - **Prompt library**, per-mode defaults, usage statistics, backup/restore, logs, dark/light theme,
   i18n-ready strings.
 - Friendly errors for invalid key, no quota, rate limits (auto retry with backoff), offline,
@@ -153,6 +164,24 @@ and verifies their keys with the app code.
 ## Adding a new provider
 
 No UI changes are needed — the UI reads capabilities from the registry.
+
+**OpenAI-compatible APIs** need only a few lines with the factory in
+`src/providers/shared/compat-provider.ts` (see `src/providers/deepseek/index.ts`):
+
+```ts
+export const myAdapter = compatProvider({
+  id: 'myprovider',
+  name: 'My Provider',
+  description: 'What it offers',
+  keyUrl: 'https://example.com/api-keys',
+  keyPlaceholder: 'mp-...',
+  baseUrl: 'https://api.example.com/v1',
+  models: [{ id: 'my-model', name: 'My Model', contextWindow: 128_000 }]
+})
+```
+
+Set `keyOptional: true` on an adapter for local servers that need no key (see Ollama), and
+`beta: true` while its API details are unverified. For anything else:
 
 1. Create `src/providers/<name>/index.ts` exporting a `ProviderAdapter`
    (see `src/providers/types.ts`):

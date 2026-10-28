@@ -1,3 +1,4 @@
+import { DEFAULT_PRICES } from './pricing'
 import type { Settings } from './types'
 
 export const APP_NAME = 'AI Hub'
@@ -10,7 +11,9 @@ export const DEFAULT_SETTINGS: Settings = {
   chat: { temperature: 0.7, maxTokens: 4096 },
   providerConfig: {},
   modelCache: {},
-  voiceCache: {}
+  voiceCache: {},
+  prices: DEFAULT_PRICES,
+  onboardingCompleted: false
 }
 
 export const CODE_SYSTEM_PROMPT = `You are an expert software engineer and pair programmer.

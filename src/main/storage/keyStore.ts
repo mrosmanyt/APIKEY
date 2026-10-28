@@ -58,9 +58,18 @@ export class KeyStore {
     }))
   }
 
+  /** Mark a provider that needs no key (e.g. local Ollama) as connected. */
+  setKeyless(providerId: string): void {
+    this.store.update((all) => ({
+      ...all,
+      [providerId]: { cipher: '', hint: '', status: 'untested', updatedAt: Date.now() }
+    }))
+  }
+
   get(providerId: string): string | undefined {
     const entry = this.store.read()[providerId]
     if (!entry) return undefined
+    if (entry.cipher === '') return ''
     try {
       return this.encryptor.decrypt(Buffer.from(entry.cipher, 'base64'))
     } catch {

@@ -1,5 +1,6 @@
 import { newId } from '@shared/ids'
-import type { Attachment } from '@shared/types'
+import type { AppErrorInfo, Attachment } from '@shared/types'
+import { api, call, errorInfo } from './api'
 
 export const MAX_IMAGE_MB = 20
 export const MAX_TEXT_MB = 2
@@ -21,9 +22,49 @@ export function readAsBase64(file: Blob): Promise<string> {
 }
 
 export type AttachmentResult =
-  { ok: true; attachment: Attachment } | { ok: false; reason: 'too_large' | 'unsupported' }
+  | { ok: true; attachment: Attachment }
+  | { ok: false; reason: 'too_large' | 'unsupported' }
+  | { ok: false; reason: 'error'; error: AppErrorInfo }
+
+export const MAX_DOCUMENT_MB = 50
+const DOC_EXT = /\.(pdf|docx?)$/i
+const DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]
+
+export function isDocument(file: { name: string; type: string }): boolean {
+  return DOC_TYPES.includes(file.type) || DOC_EXT.test(file.name)
+}
+
+/** PDF/DOCX (and oversized .txt) text is extracted locally in the main process. */
+async function documentToAttachment(file: File): Promise<AttachmentResult> {
+  if (file.size > MAX_DOCUMENT_MB * 1024 * 1024) return { ok: false, reason: 'too_large' }
+  try {
+    const out = await call(
+      api().files.extract({ name: file.name, mime: file.type, base64: await readAsBase64(file) })
+    )
+    return {
+      ok: true,
+      attachment: {
+        id: newId('att_'),
+        name: file.name,
+        mime: file.type || 'text/plain',
+        kind: 'text',
+        size: file.size,
+        text: out.text,
+        pages: out.pages,
+        truncated: out.truncated || undefined
+      }
+    }
+  } catch (err) {
+    return { ok: false, reason: 'error', error: errorInfo(err) }
+  }
+}
 
 export async function fileToAttachment(file: File): Promise<AttachmentResult> {
+  if (isDocument(file)) return documentToAttachment(file)
   if (IMAGE_TYPES.includes(file.type)) {
     if (file.size > MAX_IMAGE_MB * 1024 * 1024) return { ok: false, reason: 'too_large' }
     return {
@@ -43,7 +84,8 @@ export async function fileToAttachment(file: File): Promise<AttachmentResult> {
     TEXT_EXT.test(file.name) ||
     file.type === 'application/json'
   ) {
-    if (file.size > MAX_TEXT_MB * 1024 * 1024) return { ok: false, reason: 'too_large' }
+    // Large text files go through the extractor, which truncates them safely.
+    if (file.size > MAX_TEXT_MB * 1024 * 1024) return documentToAttachment(file)
     return {
       ok: true,
       attachment: {

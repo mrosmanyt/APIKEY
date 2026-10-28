@@ -68,9 +68,13 @@ export function buildOpenAIChatBody(req: ChatRequest, opts: OpenAICompatOptions)
   return body
 }
 
-export function bearerHeaders(apiKey: string, extra?: Record<string, string>) {
+/** JSON headers with bearer auth. Keyless providers (empty key) send no Authorization. */
+export function bearerHeaders(
+  apiKey: string,
+  extra?: Record<string, string>
+): Record<string, string> {
   return {
-    Authorization: `Bearer ${apiKey}`,
+    ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     'Content-Type': 'application/json',
     ...(extra ?? {})
   }
@@ -82,6 +86,8 @@ interface OAStreamChunk {
     finish_reason?: string | null
   }>
   usage?: { prompt_tokens?: number; completion_tokens?: number } | null
+  /** Groq reports usage here on the final chunk. */
+  x_groq?: { usage?: { prompt_tokens?: number; completion_tokens?: number } }
   error?: { message?: string }
 }
 
@@ -125,10 +131,11 @@ export async function streamOpenAIChat(
     }
     if (delta?.refusal) refusal += delta.refusal
     if (choice?.finish_reason) result.finishReason = choice.finish_reason
-    if (chunk.usage) {
+    const usage = chunk.usage ?? chunk.x_groq?.usage
+    if (usage) {
       result.usage = {
-        inputTokens: chunk.usage.prompt_tokens,
-        outputTokens: chunk.usage.completion_tokens
+        inputTokens: usage.prompt_tokens,
+        outputTokens: usage.completion_tokens
       }
     }
   })
@@ -157,4 +164,29 @@ export async function listOpenAIModels(
   return (json.data ?? [])
     .map((m) => ({ id: m.id, name: m.name }))
     .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+/** POST {baseUrl}/audio/transcriptions (OpenAI, Groq and other compatible servers). */
+export async function transcribeOpenAICompatible(
+  ctx: ProviderContext,
+  providerId: string,
+  baseUrl: string,
+  req: { model: string; audio: Buffer; mime: string; fileName: string; language?: string }
+): Promise<{ text: string }> {
+  const form = new FormData()
+  form.append('model', req.model)
+  form.append('file', new Blob([new Uint8Array(req.audio)], { type: req.mime }), req.fileName)
+  if (req.language) form.append('language', req.language)
+  form.append('response_format', 'json')
+  const json = await requestJson<{ text?: string }>(
+    ctx,
+    providerId,
+    `${trimSlash(baseUrl)}/audio/transcriptions`,
+    {
+      method: 'POST',
+      headers: ctx.apiKey ? { Authorization: `Bearer ${ctx.apiKey}` } : {},
+      body: form
+    }
+  )
+  return { text: json.text ?? '' }
 }

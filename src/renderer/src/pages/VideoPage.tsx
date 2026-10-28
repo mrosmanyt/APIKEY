@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppErrorInfo, VideoJob, VideoModelInfo } from '@shared/types'
 import { BetaBadge } from '../components/BetaBadge'
+import { EnhanceButton } from '../components/EnhanceButton'
 import { ErrorBox } from '../components/ErrorBox'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
@@ -110,7 +111,7 @@ export function VideoPage() {
         </button>
       </PageHeader>
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <section className="space-y-4 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:w-96 lg:shrink-0 lg:border-b-0 lg:border-r">
+        <section className="space-y-4 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:w-96 lg:shrink-0 lg:border-b-0 lg:border-e">
           <ProviderModelPicker capability="video" value={sel} onChange={setSel} />
           {experimental && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
@@ -120,7 +121,10 @@ export function VideoPage() {
           <div>
             <div className="flex items-center justify-between">
               <label className="label">{t('video.prompt')}</label>
-              <PromptPickerButton modes={['video']} onPick={setPrompt} />
+              <div className="flex items-center gap-1">
+                <EnhanceButton target="video" value={prompt} onChange={setPrompt} />
+                <PromptPickerButton modes={['video']} onPick={setPrompt} />
+              </div>
             </div>
             <textarea
               className="input min-h-[8rem]"
@@ -322,7 +326,7 @@ export function VideoPage() {
                       <Icon name="edit" className="h-3.5 w-3.5" />
                     </button>
                     <button
-                      className="btn-ghost btn-sm ml-auto text-red-600"
+                      className="btn-ghost btn-sm ms-auto text-red-600"
                       title={t('common.delete')}
                       onClick={() =>
                         act(async () => {

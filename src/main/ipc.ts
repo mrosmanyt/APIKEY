@@ -37,11 +37,14 @@ import {
 import { outputDir, type AppContext } from './services/context'
 import type { AiService } from './services/ai'
 import type { VideoService } from './services/video'
+import { extractDocument } from './services/documents'
 import {
   zCapability,
   zChatRequest,
   zConfig,
   zConversation,
+  zEnhanceRequest,
+  zExtractRequest,
   zId,
   zImageRequest,
   zPrompt,
@@ -190,6 +193,7 @@ export function registerIpc(deps: IpcDeps): void {
     return ai.statuses()
   })
   handle('providers:testKey', one(zProviderId), (id) => ai.testKey(id))
+  handle('providers:connect', one(zProviderId), (id) => ai.connectKeyless(id))
   handle('providers:setConfig', z.tuple([zProviderId, zConfig]), (id, config) => {
     ai.setConfig(id, config)
     return ai.statuses()
@@ -261,6 +265,14 @@ export function registerIpc(deps: IpcDeps): void {
   // ----------------------------------------------------------- images
   handle('images:generate', one(zImageRequest), (req) => ai.generateImages(req))
   handle('images:list', none, () => storage.images.all())
+  handle('images:upscale', z.tuple([zId, zProviderId]), (id, providerId) =>
+    ai.upscaleImage(id, providerId)
+  )
+  handle(
+    'images:vary',
+    z.tuple([zId, zProviderId, z.number().int().min(1).max(4)]),
+    (id, providerId, n) => ai.imageVariations(id, providerId, n)
+  )
   handle('images:delete', one(zId), (id) => {
     const rec = storage.images.remove(id)
     if (rec?.filePath) {
@@ -329,11 +341,18 @@ export function registerIpc(deps: IpcDeps): void {
   })
 
   // ----------------------------------------------------------- usage & prompts
-  handle('usage:get', none, () => storage.usage.get())
+  const usageReport = () => ({ totals: storage.usage.get(), monthly: storage.usage.monthly() })
+  handle('usage:get', none, usageReport)
   handle('usage:reset', none, () => {
     storage.usage.reset()
-    return storage.usage.get()
+    return usageReport()
   })
+
+  // ----------------------------------------------------------- prompt enhancer & documents
+  handle('prompt:enhance', one(zEnhanceRequest), (req) => ai.enhancePrompt(req))
+  handle('files:extract', one(zExtractRequest), (req) =>
+    extractDocument(req.name, req.mime, Buffer.from(req.base64, 'base64'))
+  )
   handle('prompts:list', none, () => storage.prompts.all())
   handle('prompts:save', one(zPrompt), (p) =>
     storage.prompts.upsert({ ...p, updatedAt: Date.now() })

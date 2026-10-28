@@ -105,7 +105,8 @@ export const mockAdapter: ProviderAdapter = {
         name: 'Mock image',
         sizes: ['256x256', '512x512'],
         maxCount: 4,
-        supportsNegativePrompt: true
+        supportsNegativePrompt: true,
+        supportsReference: true
       }
     ],
     async generate(_ctx, req) {
@@ -121,7 +122,20 @@ export const mockAdapter: ProviderAdapter = {
         data: png(Number(req.size?.split('x')[0]) || 256, i + req.prompt.length),
         mime: 'image/png'
       }))
-    }
+    },
+    async upscale(_ctx, image) {
+      await wait(300)
+      return { data: png(512, image.data.length % 7), mime: 'image/png' }
+    },
+    upscaleBeta: true,
+    async vary(_ctx, image, count) {
+      await wait(300)
+      return Array.from({ length: count }, (_, i) => ({
+        data: png(256, i + image.data.length),
+        mime: 'image/png'
+      }))
+    },
+    variationModel: 'mock-image'
   },
   tts: {
     models: [{ id: 'mock-tts', name: 'Mock TTS' }],

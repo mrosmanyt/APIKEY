@@ -12,10 +12,15 @@ export const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const ID = 'gemini'
 
 const CHAT_MODELS: ModelInfo[] = [
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', vision: true },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', vision: true },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite', vision: true },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', vision: true }
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', vision: true, contextWindow: 1_048_576 },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', vision: true, contextWindow: 1_048_576 },
+  {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
+    vision: true,
+    contextWindow: 1_048_576
+  },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', vision: true, contextWindow: 1_048_576 }
 ]
 
 const GEMINI_IMAGE_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9']
@@ -27,7 +32,8 @@ const IMAGE_MODELS: ImageModelInfo[] = [
     name: 'Gemini 2.5 Flash Image',
     sizes: GEMINI_IMAGE_RATIOS,
     maxCount: 4,
-    supportsNegativePrompt: false
+    supportsNegativePrompt: false,
+    supportsReference: true
   },
   {
     id: 'imagen-4.0-generate-001',
@@ -182,7 +188,24 @@ async function generateWithGeminiImage(
 ): Promise<ImageOutput[]> {
   const url = `${GEMINI_BASE}/models/${encodeURIComponent(req.model)}:generateContent`
   const body: Record<string, unknown> = {
-    contents: [{ role: 'user', parts: [{ text: req.prompt }] }],
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          ...(req.reference
+            ? [
+                {
+                  inline_data: {
+                    mime_type: req.reference.mime,
+                    data: req.reference.data.toString('base64')
+                  }
+                }
+              ]
+            : []),
+          { text: req.prompt }
+        ]
+      }
+    ],
     generationConfig: {
       responseModalities: ['IMAGE'],
       ...(req.size && req.size !== 'default' ? { imageConfig: { aspectRatio: req.size } } : {})
@@ -326,8 +349,19 @@ export const geminiAdapter: ProviderAdapter = {
 
   image: {
     models: IMAGE_MODELS,
-    generate: (ctx, req) =>
-      /^imagen/i.test(req.model) ? generateWithImagen(ctx, req) : generateWithGeminiImage(ctx, req)
+    async generate(ctx, req) {
+      if (/^imagen/i.test(req.model)) {
+        if (req.reference) {
+          throw new ProviderError({
+            kind: 'unsupported',
+            providerId: ID,
+            message: 'Imagen cannot use a reference image here. Choose Gemini 2.5 Flash Image.'
+          })
+        }
+        return generateWithImagen(ctx, req)
+      }
+      return generateWithGeminiImage(ctx, req)
+    }
   },
 
   video: {

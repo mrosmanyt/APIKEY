@@ -7,6 +7,7 @@ import { BackupTab } from './settings/BackupTab'
 import { DefaultsTab } from './settings/DefaultsTab'
 import { GeneralTab } from './settings/GeneralTab'
 import { KeysTab } from './settings/KeysTab'
+import { PricesTab } from './settings/PricesTab'
 import { UsageTab } from './settings/UsageTab'
 
 const TABS: Array<{ id: string; label: TranslationKey; render: () => ReactNode }> = [
@@ -14,6 +15,7 @@ const TABS: Array<{ id: string; label: TranslationKey; render: () => ReactNode }
   { id: 'defaults', label: 'settings.tabDefaults', render: () => <DefaultsTab /> },
   { id: 'general', label: 'settings.tabGeneral', render: () => <GeneralTab /> },
   { id: 'usage', label: 'settings.tabUsage', render: () => <UsageTab /> },
+  { id: 'prices', label: 'settings.tabPrices', render: () => <PricesTab /> },
   { id: 'backup', label: 'settings.tabBackup', render: () => <BackupTab /> },
   { id: 'about', label: 'settings.tabAbout', render: () => <AboutTab /> }
 ]
@@ -26,12 +28,12 @@ export function SettingsPage() {
     <>
       <PageHeader title={t('settings.title')} />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="flex gap-1 overflow-x-auto border-b border-slate-200 p-2 dark:border-slate-800 md:w-48 md:flex-col md:border-b-0 md:border-r">
+        <div className="flex gap-1 overflow-x-auto border-b border-slate-200 p-2 dark:border-slate-800 md:w-48 md:flex-col md:border-b-0 md:border-e">
           {TABS.map((x) => (
             <button
               key={x.id}
               onClick={() => navigate('settings', { settingsTab: x.id })}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm ${
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-start text-sm ${
                 x.id === current.id
                   ? 'bg-slate-200 font-semibold dark:bg-slate-800'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800/60'

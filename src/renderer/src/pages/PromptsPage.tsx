@@ -109,7 +109,7 @@ export function PromptsPage() {
                   {t('common.edit')}
                 </button>
                 <button
-                  className="btn-ghost btn-sm ml-auto text-red-600"
+                  className="btn-ghost btn-sm ms-auto text-red-600"
                   title={t('common.delete')}
                   onClick={async () => {
                     if (!window.confirm(t('common.confirmDelete'))) return

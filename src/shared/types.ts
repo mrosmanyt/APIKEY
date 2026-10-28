@@ -7,14 +7,18 @@
 export type Capability = 'chat' | 'image' | 'video' | 'tts' | 'stt'
 export const CAPABILITIES: Capability[] = ['chat', 'image', 'video', 'tts', 'stt']
 
-/** App "modes" that can have a default provider/model. */
-export type AppMode = 'chat' | 'code' | 'image' | 'video' | 'tts' | 'stt'
+/** App "modes" that can have a default provider/model. 'enhance' = prompt enhancer model. */
+export type AppMode = 'chat' | 'code' | 'image' | 'video' | 'tts' | 'stt' | 'enhance'
 
 export interface ModelInfo {
   id: string
   name?: string
   /** Model accepts image input. */
   vision?: boolean
+  /** Context window in tokens, when known (used to warn about large attachments). */
+  contextWindow?: number
+  /** Price in USD per 1M tokens, when the provider's model list reports it (e.g. OpenRouter). */
+  pricing?: { input: number; output: number }
 }
 
 export interface ImageModelInfo extends ModelInfo {
@@ -22,6 +26,10 @@ export interface ImageModelInfo extends ModelInfo {
   sizes: string[]
   maxCount: number
   supportsNegativePrompt: boolean
+  /** Accepts a reference image (image-to-image / edit). */
+  supportsReference?: boolean
+  /** Reference-image support is not fully verified: labelled "Beta". */
+  referenceBeta?: boolean
 }
 
 export interface VideoModelInfo extends ModelInfo {
@@ -56,9 +64,20 @@ export interface ProviderInfo {
   /** Non-secret configuration (e.g. base URL for custom providers). */
   configFields: ConfigField[]
   canListModels: boolean
+  /** Works without an API key (e.g. local Ollama). */
+  keyOptional?: boolean
+  /** The provider's API details are not fully verified: labelled "Beta". */
+  beta?: boolean
   capabilities: {
     chat?: { models: ModelInfo[] }
-    image?: { models: ImageModelInfo[] }
+    image?: {
+      models: ImageModelInfo[]
+      canUpscale?: boolean
+      upscaleBeta?: boolean
+      canVary?: boolean
+      /** Model used for variations (e.g. dall-e-2). */
+      variationModel?: string
+    }
     /** experimental = the whole video capability is shown as "Beta". */
     video?: { models: VideoModelInfo[]; experimental?: boolean }
     tts?: { models: ModelInfo[]; voices: VoiceInfo[]; canListVoices: boolean }
@@ -117,6 +136,10 @@ export interface Attachment {
   mime: string
   kind: 'image' | 'text'
   size: number
+  /** For documents (PDF/DOCX): number of pages when known. */
+  pages?: number
+  /** The extracted document text was truncated. */
+  truncated?: boolean
   /** base64 payload for images (no data: prefix). */
   dataBase64?: string
   /** Text content for text files. */
@@ -126,6 +149,8 @@ export interface Attachment {
 export interface TokenUsage {
   inputTokens?: number
   outputTokens?: number
+  /** Counts were estimated locally (~4 characters per token) because the provider sent none. */
+  estimated?: boolean
 }
 
 export interface ChatMessage {
@@ -189,6 +214,14 @@ export interface ConversationSummary {
 
 // ---------------------------------------------------------------- Images
 
+export interface ImageReference {
+  /** A generated image from the gallery... */
+  imageId?: string
+  /** ...or an uploaded image. */
+  base64?: string
+  mime?: string
+}
+
 export interface ImageRequest {
   providerId: string
   model: string
@@ -196,7 +229,12 @@ export interface ImageRequest {
   negativePrompt?: string
   size?: string
   count: number
+  reference?: ImageReference
+  /** 0–1: how much the result may differ from the reference (where supported). */
+  strength?: number
 }
+
+export type ImageOperation = 'generate' | 'reference' | 'upscale' | 'variation'
 
 export interface GeneratedImage {
   id: string
@@ -209,6 +247,8 @@ export interface GeneratedImage {
   mime: string
   filePath: string
   createdAt: number
+  operation?: ImageOperation
+  sourceImageId?: string
 }
 
 // ---------------------------------------------------------------- Audio
@@ -289,6 +329,16 @@ export interface ModeDefault {
   model: string
 }
 
+/** One row of the editable price table (USD per 1M tokens). */
+export interface PriceRow {
+  id: string
+  providerId: string
+  /** Exact model id, or a prefix ending in "*" (e.g. "gpt-4o*"), or "*" for all models. */
+  model: string
+  input: number
+  output: number
+}
+
 export interface Settings {
   theme: ThemeSetting
   language: string
@@ -302,6 +352,10 @@ export interface Settings {
   modelCache: Record<string, ModelInfo[]>
   /** Cached voice lists. key = providerId */
   voiceCache: Record<string, VoiceInfo[]>
+  /** Editable price table used for cost estimates. */
+  prices: PriceRow[]
+  /** The first-run setup wizard was finished or skipped. */
+  onboardingCompleted: boolean
 }
 
 export interface ProviderUsage {
@@ -316,6 +370,38 @@ export interface ProviderUsage {
 }
 
 export type UsageStats = Record<string, ProviderUsage>
+
+export interface ModelUsage {
+  requests: number
+  inputTokens: number
+  outputTokens: number
+  /** Some of the token counts were estimated locally. */
+  estimated?: boolean
+}
+
+/** month ("YYYY-MM") -> providerId -> model -> usage. Costs are computed from the price table. */
+export type MonthlyUsage = Record<string, Record<string, Record<string, ModelUsage>>>
+
+export interface UsageReport {
+  totals: UsageStats
+  monthly: MonthlyUsage
+}
+
+export interface ExtractedFile {
+  text: string
+  pages?: number
+  /** Text was cut to the maximum attachment size. */
+  truncated: boolean
+  /** Characters before truncation. */
+  originalChars: number
+}
+
+export interface EnhanceRequest {
+  providerId: string
+  model: string
+  prompt: string
+  target: 'chat' | 'image' | 'video'
+}
 
 export type PromptMode = 'any' | 'chat' | 'code' | 'image' | 'video' | 'tts'
 

@@ -8,9 +8,15 @@
 import type { Capability, ProviderInfo } from '@shared/types'
 import { anthropicAdapter } from './anthropic'
 import { customAdapter } from './custom'
+import { deepseekAdapter } from './deepseek'
 import { elevenlabsAdapter } from './elevenlabs'
 import { geminiAdapter } from './gemini'
+import { groqAdapter } from './groq'
+import { mistralAdapter } from './mistral'
+import { ollamaAdapter } from './ollama'
 import { openaiAdapter } from './openai'
+import { openrouterAdapter } from './openrouter'
+import { stabilityAdapter } from './stability'
 import type { ProviderAdapter } from './types'
 import { xaiAdapter } from './xai'
 
@@ -20,6 +26,12 @@ export const ADAPTERS: ProviderAdapter[] = [
   geminiAdapter,
   xaiAdapter,
   elevenlabsAdapter,
+  stabilityAdapter,
+  openrouterAdapter,
+  groqAdapter,
+  deepseekAdapter,
+  mistralAdapter,
+  ollamaAdapter,
   customAdapter
 ]
 
@@ -78,6 +90,8 @@ export function toProviderInfo(
     keyPlaceholder: a.keyPlaceholder,
     configFields: a.configFields ?? [],
     canListModels: Boolean(a.listModels),
+    keyOptional: a.keyOptional || undefined,
+    beta: a.beta || undefined,
     capabilities: {}
   }
   if (a.chat) {
@@ -87,7 +101,15 @@ export function toProviderInfo(
       models.unshift({ id: configured, vision: true })
     info.capabilities.chat = { models }
   }
-  if (a.image) info.capabilities.image = { models: a.image.models }
+  if (a.image) {
+    info.capabilities.image = {
+      models: a.image.models,
+      canUpscale: Boolean(a.image.upscale) || undefined,
+      upscaleBeta: a.image.upscaleBeta || undefined,
+      canVary: Boolean(a.image.vary) || undefined,
+      variationModel: a.image.variationModel
+    }
+  }
   if (a.video)
     info.capabilities.video = { models: a.video.models, experimental: a.video.experimental }
   if (a.tts)

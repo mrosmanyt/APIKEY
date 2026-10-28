@@ -23,11 +23,11 @@ const chatOpts: OpenAICompatOptions = {
 }
 
 const CHAT_MODELS: ModelInfo[] = [
-  { id: 'grok-4', name: 'Grok 4', vision: true },
-  { id: 'grok-4-fast', name: 'Grok 4 Fast', vision: true },
-  { id: 'grok-3', name: 'Grok 3' },
-  { id: 'grok-3-mini', name: 'Grok 3 mini' },
-  { id: 'grok-code-fast-1', name: 'Grok Code Fast' }
+  { id: 'grok-4', name: 'Grok 4', vision: true, contextWindow: 256_000 },
+  { id: 'grok-4-fast', name: 'Grok 4 Fast', vision: true, contextWindow: 2_000_000 },
+  { id: 'grok-3', name: 'Grok 3', contextWindow: 131_072 },
+  { id: 'grok-3-mini', name: 'Grok 3 mini', contextWindow: 131_072 },
+  { id: 'grok-code-fast-1', name: 'Grok Code Fast', contextWindow: 256_000 }
 ]
 
 const IMAGE_MODELS: ImageModelInfo[] = [

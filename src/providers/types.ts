@@ -40,6 +40,15 @@ export interface ImageGenerateRequest {
   negativePrompt?: string
   size?: string
   count: number
+  /** Reference image for image-to-image / edits (only for models with supportsReference). */
+  reference?: { data: Buffer; mime: string }
+  /** 0–1, how far the result may move away from the reference. */
+  strength?: number
+}
+
+export interface ImageInput {
+  data: Buffer
+  mime: string
 }
 
 export interface ImageOutput {
@@ -95,6 +104,10 @@ export interface ProviderAdapter {
   keyUrl: string
   keyPlaceholder: string
   configFields?: ConfigField[]
+  /** No API key needed (e.g. a local server). The UI shows "Test connection" instead. */
+  keyOptional?: boolean
+  /** API details not fully verified — shown with a "Beta" label. */
+  beta?: boolean
 
   /** Validate the key with a cheap authenticated request. Throws ProviderError on failure. */
   testKey(ctx: ProviderContext): Promise<void>
@@ -114,6 +127,12 @@ export interface ProviderAdapter {
   image?: {
     models: ImageModelInfo[]
     generate(ctx: ProviderContext, req: ImageGenerateRequest): Promise<ImageOutput[]>
+    /** Upscale an existing image. */
+    upscale?(ctx: ProviderContext, image: ImageInput): Promise<ImageOutput>
+    upscaleBeta?: boolean
+    /** Create variations of an existing image. */
+    vary?(ctx: ProviderContext, image: ImageInput, count: number): Promise<ImageOutput[]>
+    variationModel?: string
   }
 
   tts?: {

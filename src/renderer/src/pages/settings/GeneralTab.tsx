@@ -129,6 +129,15 @@ export function GeneralTab() {
           </button>
         </div>
       </section>
+      <section className="card space-y-2 p-4">
+        <h3 className="font-semibold">{t('settings.wizard')}</h3>
+        <button
+          className="btn-secondary btn-sm"
+          onClick={() => void updateSettings({ onboardingCompleted: false })}
+        >
+          {t('settings.runWizard')}
+        </button>
+      </section>
     </div>
   )
 }

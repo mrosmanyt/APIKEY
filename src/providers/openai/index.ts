@@ -9,9 +9,10 @@ import {
   bearerHeaders,
   listOpenAIModels,
   streamOpenAIChat,
+  transcribeOpenAICompatible,
   type OpenAICompatOptions
 } from '../shared/openai-compatible'
-import type { ImageGenerateRequest, ProviderAdapter, ProviderContext } from '../types'
+import type { ImageGenerateRequest, ImageInput, ProviderAdapter, ProviderContext } from '../types'
 
 export const OPENAI_BASE = 'https://api.openai.com/v1'
 const ID = 'openai'
@@ -30,15 +31,15 @@ const chatOpts: OpenAICompatOptions = {
 }
 
 const CHAT_MODELS: ModelInfo[] = [
-  { id: 'gpt-5', name: 'GPT-5', vision: true },
-  { id: 'gpt-5-mini', name: 'GPT-5 mini', vision: true },
-  { id: 'gpt-5-nano', name: 'GPT-5 nano', vision: true },
-  { id: 'gpt-4.1', name: 'GPT-4.1', vision: true },
-  { id: 'gpt-4.1-mini', name: 'GPT-4.1 mini', vision: true },
-  { id: 'gpt-4o', name: 'GPT-4o', vision: true },
-  { id: 'gpt-4o-mini', name: 'GPT-4o mini', vision: true },
-  { id: 'o4-mini', name: 'o4-mini', vision: true },
-  { id: 'o3', name: 'o3', vision: true }
+  { id: 'gpt-5', name: 'GPT-5', vision: true, contextWindow: 400_000 },
+  { id: 'gpt-5-mini', name: 'GPT-5 mini', vision: true, contextWindow: 400_000 },
+  { id: 'gpt-5-nano', name: 'GPT-5 nano', vision: true, contextWindow: 400_000 },
+  { id: 'gpt-4.1', name: 'GPT-4.1', vision: true, contextWindow: 1_047_576 },
+  { id: 'gpt-4.1-mini', name: 'GPT-4.1 mini', vision: true, contextWindow: 1_047_576 },
+  { id: 'gpt-4o', name: 'GPT-4o', vision: true, contextWindow: 128_000 },
+  { id: 'gpt-4o-mini', name: 'GPT-4o mini', vision: true, contextWindow: 128_000 },
+  { id: 'o4-mini', name: 'o4-mini', vision: true, contextWindow: 200_000 },
+  { id: 'o3', name: 'o3', vision: true, contextWindow: 200_000 }
 ]
 
 export const OPENAI_IMAGE_MODELS: ImageModelInfo[] = [
@@ -47,14 +48,16 @@ export const OPENAI_IMAGE_MODELS: ImageModelInfo[] = [
     name: 'GPT Image 1',
     sizes: ['1024x1024', '1536x1024', '1024x1536', 'auto'],
     maxCount: 4,
-    supportsNegativePrompt: false
+    supportsNegativePrompt: false,
+    supportsReference: true
   },
   {
     id: 'gpt-image-1-mini',
     name: 'GPT Image 1 mini',
     sizes: ['1024x1024', '1536x1024', '1024x1536', 'auto'],
     maxCount: 4,
-    supportsNegativePrompt: false
+    supportsNegativePrompt: false,
+    supportsReference: true
   },
   {
     id: 'dall-e-3',
@@ -123,14 +126,54 @@ export function buildOpenAIImageBody(req: ImageGenerateRequest): Record<string, 
   return body
 }
 
+type ImagesResponse = { data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }> }
+
+const fileOf = (img: ImageInput, _name: string) =>
+  new Blob([new Uint8Array(img.data)], { type: img.mime })
+
+/** Multipart body for /images/edits (gpt-image models, reference image + prompt). */
+export function buildOpenAIEditForm(
+  req: ImageGenerateRequest & { reference: ImageInput }
+): FormData {
+  const form = new FormData()
+  form.append('model', req.model)
+  form.append('prompt', req.prompt)
+  form.append('n', String(Math.max(1, req.count)))
+  if (req.size && req.size !== 'auto') form.append('size', req.size)
+  form.append(
+    'image',
+    fileOf(req.reference, 'reference'),
+    `reference.${req.reference.mime.split('/')[1] ?? 'png'}`
+  )
+  return form
+}
+
 async function generateImages(ctx: ProviderContext, req: ImageGenerateRequest) {
-  const json = await requestJson<{
-    data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }>
-  }>(ctx, ID, `${OPENAI_BASE}/images/generations`, {
-    method: 'POST',
-    headers: bearerHeaders(ctx.apiKey),
-    body: JSON.stringify(buildOpenAIImageBody(req))
-  })
+  let json: ImagesResponse
+  if (req.reference) {
+    if (!OPENAI_IMAGE_MODELS.find((m) => m.id === req.model)?.supportsReference) {
+      throw new ProviderError({
+        kind: 'unsupported',
+        providerId: ID,
+        message: `${req.model} cannot use a reference image. Choose GPT Image 1.`
+      })
+    }
+    json = await requestJson<ImagesResponse>(ctx, ID, `${OPENAI_BASE}/images/edits`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${ctx.apiKey}` },
+      body: buildOpenAIEditForm({ ...req, reference: req.reference })
+    })
+  } else {
+    json = await requestJson<ImagesResponse>(ctx, ID, `${OPENAI_BASE}/images/generations`, {
+      method: 'POST',
+      headers: bearerHeaders(ctx.apiKey),
+      body: JSON.stringify(buildOpenAIImageBody(req))
+    })
+  }
+  return decodeImages(ctx, json)
+}
+
+async function decodeImages(ctx: ProviderContext, json: ImagesResponse) {
   const out = []
   for (const item of json.data ?? []) {
     if (item.b64_json) {
@@ -185,7 +228,26 @@ export const openaiAdapter: ProviderAdapter = {
     stream: (ctx, req, handlers) => streamOpenAIChat(ctx, req, handlers, chatOpts)
   },
 
-  image: { models: OPENAI_IMAGE_MODELS, generate: generateImages },
+  image: {
+    models: OPENAI_IMAGE_MODELS,
+    generate: generateImages,
+    variationModel: 'dall-e-2',
+    /** DALL·E 2 variations (input must be a square PNG under 4 MB). */
+    async vary(ctx, image, count) {
+      const form = new FormData()
+      form.append('model', 'dall-e-2')
+      form.append('image', fileOf(image, 'image'), 'image.png')
+      form.append('n', String(Math.min(4, Math.max(1, count))))
+      form.append('size', '1024x1024')
+      form.append('response_format', 'b64_json')
+      const json = await requestJson<ImagesResponse>(ctx, ID, `${OPENAI_BASE}/images/variations`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${ctx.apiKey}` },
+        body: form
+      })
+      return decodeImages(ctx, json)
+    }
+  },
 
   tts: {
     models: [
@@ -227,24 +289,7 @@ export const openaiAdapter: ProviderAdapter = {
       { id: 'gpt-4o-mini-transcribe', name: 'GPT-4o mini Transcribe' },
       { id: 'whisper-1', name: 'Whisper' }
     ],
-    async transcribe(ctx, req) {
-      const form = new FormData()
-      form.append('model', req.model)
-      form.append('file', new Blob([new Uint8Array(req.audio)], { type: req.mime }), req.fileName)
-      if (req.language) form.append('language', req.language)
-      form.append('response_format', 'json')
-      const json = await requestJson<{ text?: string }>(
-        ctx,
-        ID,
-        `${OPENAI_BASE}/audio/transcriptions`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${ctx.apiKey}` },
-          body: form
-        }
-      )
-      return { text: json.text ?? '' }
-    }
+    transcribe: (ctx, req) => transcribeOpenAICompatible(ctx, ID, OPENAI_BASE, req)
   },
 
   video: {

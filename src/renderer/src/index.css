@@ -9,6 +9,29 @@
   color-scheme: dark;
 }
 
+/* Urdu: Segoe UI has good Naskh-style Urdu glyphs on Windows; Nastaliq fonts as fallback. */
+html:lang(ur) body {
+  font-family:
+    'Segoe UI', 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Urdu Typesetting', Tahoma,
+    system-ui, sans-serif;
+  line-height: 1.75;
+}
+
+/* Right-to-left layouts keep code, keys, URLs and shortcuts left-to-right. */
+[dir='rtl'] pre,
+[dir='rtl'] code,
+[dir='rtl'] kbd,
+[dir='rtl'] .font-mono,
+[dir='rtl'] input[type='password'],
+[dir='rtl'] input[type='url'],
+[dir='rtl'] input[type='number'] {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+[dir='rtl'] pre {
+  text-align: left;
+}
+
 html,
 body,
 #root {
@@ -75,19 +98,19 @@ body {
   @apply mb-1 mt-3 font-semibold;
 }
 .markdown ul {
-  @apply my-2 list-disc pl-6;
+  @apply my-2 list-disc ps-6;
 }
 .markdown ol {
-  @apply my-2 list-decimal pl-6;
+  @apply my-2 list-decimal ps-6;
 }
 .markdown a {
   @apply text-brand-600 underline dark:text-brand-300;
 }
 .markdown blockquote {
-  @apply my-2 border-l-4 border-slate-300 pl-3 text-slate-600 dark:border-slate-600 dark:text-slate-300;
+  @apply my-2 border-s-4 border-slate-300 ps-3 text-slate-600 dark:border-slate-600 dark:text-slate-300;
 }
 .markdown table {
-  @apply my-2 w-full border-collapse text-left;
+  @apply my-2 w-full border-collapse text-start;
 }
 .markdown th,
 .markdown td {
