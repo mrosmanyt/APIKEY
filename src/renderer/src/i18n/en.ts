@@ -71,6 +71,7 @@ export const en = {
     cancelled: 'Cancelled',
     not_configured: 'Not set up yet',
     unsupported: 'Not supported',
+    invalid_license: 'License not accepted',
     unknown: 'Unexpected error',
     hint_invalid_key:
       'Check the key in Settings › API Keys, or create a new one on the provider website.',

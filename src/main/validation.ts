@@ -20,6 +20,7 @@ const ERROR_KINDS = [
   'cancelled',
   'not_configured',
   'unsupported',
+  'invalid_license',
   'unknown'
 ] as const
 

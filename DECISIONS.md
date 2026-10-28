@@ -112,3 +112,20 @@ by id and re-encrypts imported keys with safeStorage. Generated media files are 
 All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.key')` helper and
 `{placeholder}` interpolation. Adding a language = one new dictionary file + one line in
 `i18n/index.ts`.
+
+## UI
+
+- Pages stay mounted after their first visit (hidden with CSS) so a streaming answer, a form
+  in progress or an ongoing recording survive switching screens.
+- Navigation is a fixed sidebar (Chat, Images, Video, Audio, Code, History, Prompts, Settings);
+  the sidebar collapses to icons on narrow windows. Compare mode lives inside Chat.
+- "Usable" provider pickers show all providers that have a capability, but disable those
+  without a valid key ("— add key in Settings") so users discover what is available.
+- First launch with no keys opens Settings › API Keys directly.
+
+## Development helpers
+
+- A **mock provider** (`src/providers/mock`) with every capability can be enabled with
+  `AIHUB_MOCK_PROVIDER=1` in unpackaged builds. It was used to verify every screen end-to-end
+  during development and is never registered in packaged builds.
+- `AIHUB_USER_DATA_DIR` overrides the data folder (used for automated UI checks).

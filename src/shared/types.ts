@@ -88,6 +88,7 @@ export type ErrorKind =
   | 'cancelled'
   | 'not_configured'
   | 'unsupported'
+  | 'invalid_license'
   | 'unknown'
 
 export interface AppErrorInfo {

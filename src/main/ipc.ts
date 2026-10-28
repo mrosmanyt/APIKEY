@@ -155,7 +155,7 @@ export function registerIpc(deps: IpcDeps): void {
         product: 'This license key is for a different product.',
         expired: 'This license key has expired.'
       }
-      throw new Error(messages[result.reason])
+      throw new ProviderError({ kind: 'invalid_license', message: messages[result.reason] })
     }
     ctx.logger.info('License activated', { id: result.payload.id })
     return license.status()
