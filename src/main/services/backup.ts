@@ -16,8 +16,10 @@ import type {
   Settings,
   UsageStats
 } from '@shared/types'
+import { z } from 'zod'
 import { ProviderError } from '../../providers/errors'
 import type { Storage } from '../storage'
+import { zConfig, zProviderId, zSettingsPatch } from '../validation'
 
 export const BACKUP_FORMAT = 'ai-hub-backup'
 /** v1 (unreleased dev builds) stored keys in plain text; v2 stores them encrypted. */
@@ -52,7 +54,8 @@ export interface BackupFile {
   version: number
   appVersion: string
   exportedAt: string
-  settings: Settings
+  /** Written as the full Settings; read back as untrusted data (see sanitizeBackupSettings). */
+  settings: Settings | unknown
   conversations: Conversation[]
   prompts: SavedPrompt[]
   usage: UsageStats
@@ -189,7 +192,7 @@ export function parseBackup(text: string): BackupFile {
     version: b.version,
     appVersion: String(b.appVersion ?? ''),
     exportedAt: String(b.exportedAt ?? ''),
-    settings: b.settings as Settings,
+    settings: b.settings,
     conversations: Array.isArray(b.conversations) ? b.conversations : [],
     prompts: Array.isArray(b.prompts) ? b.prompts : [],
     usage: b.usage && typeof b.usage === 'object' ? b.usage : {},
@@ -207,6 +210,56 @@ export function summarizeBackup(b: BackupFile): BackupSummary {
     hasKeys: Boolean(b.encryptedKeys || (b.keys && Object.keys(b.keys).length)),
     needsPassphrase: Boolean(b.encryptedKeys)
   }
+}
+
+/** Settings that are never taken from a backup file. */
+const NOT_RESTORED = new Set(['automation'])
+/** Caches that refill from the providers by themselves; not worth trusting from a file. */
+const CACHES = new Set(['modelCache', 'voiceCache'])
+const zProviderConfig = z.record(zProviderId, zConfig)
+
+/**
+ * Validates a backup's settings field by field with the same schema as settings:update.
+ * Unknown and invalid fields are dropped (not cast), one bad field does not discard the rest,
+ * and `automation` is never restored: the module and its tray / start-with-Windows / webhook
+ * options stay as the user set them on this PC.
+ */
+export function sanitizeBackupSettings(raw: unknown): {
+  settings: Partial<Settings>
+  dropped: string[]
+  automationSkipped: boolean
+} {
+  const out: Record<string, unknown> = {}
+  const dropped: string[] = []
+  let automationSkipped = false
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+    return { settings: {}, dropped: raw === undefined ? [] : ['settings'], automationSkipped }
+  const shape = zSettingsPatch.shape as Record<string, z.ZodType>
+  for (const [key, value] of Object.entries(raw)) {
+    if (NOT_RESTORED.has(key)) {
+      automationSkipped = true
+      continue
+    }
+    if (CACHES.has(key)) continue
+    if (key === 'providerConfig') {
+      // Keep each provider's config that is valid on its own.
+      const valid: Record<string, Record<string, string>> = {}
+      if (value && typeof value === 'object')
+        for (const [id, config] of Object.entries(value)) {
+          const r = zProviderConfig.safeParse({ [id]: config })
+          if (r.success) Object.assign(valid, r.data)
+          else dropped.push(`providerConfig.${id.slice(0, 40)}`)
+        }
+      else dropped.push(key)
+      out.providerConfig = valid
+      continue
+    }
+    const schema = Object.hasOwn(shape, key) ? shape[key] : undefined
+    const r = schema?.safeParse(value)
+    if (r?.success && r.data !== undefined) out[key] = r.data
+    else dropped.push(key.slice(0, 60))
+  }
+  return { settings: out as Partial<Settings>, dropped, automationSkipped }
 }
 
 /**
@@ -231,10 +284,13 @@ export function restoreBackup(
     }
   }
 
-  let settings = false
-  if (backup.settings && typeof backup.settings === 'object') {
-    storage.settings.replace({ ...storage.settings.get(), ...backup.settings })
-    settings = true
+  const restored = sanitizeBackupSettings(backup.settings)
+  const settings = Object.keys(restored.settings).length > 0
+  if (settings) {
+    const current = storage.settings.get()
+    // `automation` is never in restored.settings; set it explicitly anyway, so a future field
+    // added to the schema can't bring it back by accident.
+    storage.settings.replace({ ...current, ...restored.settings, automation: current.automation })
   }
   let conversations = 0
   for (const c of backup.conversations) {
@@ -262,5 +318,12 @@ export function restoreBackup(
       keys++
     }
   }
-  return { conversations, prompts, keys, settings }
+  return {
+    conversations,
+    prompts,
+    keys,
+    settings,
+    automationSettingsSkipped: restored.automationSkipped,
+    skippedSettings: restored.dropped
+  }
 }

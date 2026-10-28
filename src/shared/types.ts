@@ -463,4 +463,8 @@ export interface RestoreResult {
   prompts: number
   keys: number
   settings: boolean
+  /** The backup had Automation settings; they are never restored (this PC's stay as they are). */
+  automationSettingsSkipped: boolean
+  /** Settings fields in the backup that were unknown or invalid and were skipped. */
+  skippedSettings: string[]
 }

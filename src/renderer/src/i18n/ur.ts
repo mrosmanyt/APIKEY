@@ -460,6 +460,9 @@ export const ur: Dictionary = {
     exportedWithKeys:
       'بیک اپ {path} میں محفوظ ہو گیا۔ اس فائل میں آپ کی انکرپٹڈ API کیز ہیں — اسے نجی رکھیں۔',
     imported: '{conversations} گفتگو، {prompts} پرامپٹس اور {keys} کیز بحال ہو گئیں۔',
+    importAutomationNote:
+      'آٹومیشن کی ترتیبات بیک اپ سے بحال نہیں ہوتیں: اس کمپیوٹر پر آٹومیشن پہلے جیسی ہی رہتی ہے۔ اگر آپ اسے یہاں چاہتے ہیں تو ترتیبات › آٹومیشن میں آن کریں۔',
+    importSkippedSettings: 'بیک اپ کی کچھ ترتیبات درست نہیں تھیں اور چھوڑ دی گئیں: {list}۔',
     importTitle: 'بیک اپ امپورٹ کریں',
     importContains: '{conversations} گفتگو اور {prompts} محفوظ پرامپٹس۔',
     importNow: 'امپورٹ کریں',

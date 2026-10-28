@@ -455,6 +455,9 @@ export const en = {
     exportedWithKeys:
       'Backup saved to {path}. This file contains your encrypted API keys — keep it private.',
     imported: 'Restored {conversations} conversations, {prompts} prompts and {keys} keys.',
+    importAutomationNote:
+      'Automation settings are not restored from backups: Automation on this PC stays as it was. Turn it on in Settings › Automation if you want it here.',
+    importSkippedSettings: 'Some settings in the backup were not valid and were skipped: {list}.',
     importTitle: 'Import backup',
     importContains: '{conversations} conversations and {prompts} saved prompts.',
     importNow: 'Import',

@@ -251,6 +251,9 @@ Right-click the tray icon to open or quit AI Hub.
   try again, or choose **Import without keys**. AI Hub does not store the passphrase: if you
   forget it, the keys in that file are lost (everything else can still be imported). The
   file still contains your keys, so keep it private.
+  **Automation settings are never restored from a backup**: Automation (and its tray, start
+  with Windows and webhook options) stays as it is on this PC until you turn it on here.
+  Settings in the file that are not valid are skipped, and the import tells you which.
 - **Automation** — turn the Automation module on or off, tray / start with Windows,
   notifications, the local webhook server (port and token) and the per-item cost estimates
   used by spending caps.

@@ -169,11 +169,18 @@ export function BackupTab() {
     }
     setSettings(await call(api().settings.get()))
     setMessage(
-      t('settings.imported', {
-        conversations: res.conversations,
-        prompts: res.prompts,
-        keys: res.keys
-      })
+      [
+        t('settings.imported', {
+          conversations: res.conversations,
+          prompts: res.prompts,
+          keys: res.keys
+        }),
+        res.automationSettingsSkipped && t('settings.importAutomationNote'),
+        res.skippedSettings.length > 0 &&
+          t('settings.importSkippedSettings', { list: res.skippedSettings.join(', ') })
+      ]
+        .filter(Boolean)
+        .join(' ')
     )
   }
 

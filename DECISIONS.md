@@ -127,6 +127,14 @@ encrypted** with a passphrase they choose (min. 8 characters, entered twice):
   never appear in a log line or error, and is never stored. It travels renderer → main over
   IPC once, like an API key does when first saved.
 - Legacy v1 files (plain keys, only produced by pre-release builds) can still be imported.
+- **Settings in a backup are untrusted input.** `sanitizeBackupSettings` validates each field
+  with the matching `zSettingsPatch` schema (the one `settings:update` uses) and drops unknown
+  or invalid fields individually rather than casting the object; `providerConfig` is checked
+  per provider with `zConfig`. Model/voice caches are skipped (they refill from the providers).
+- **Automation is never restored.** A backup made on a PC with Automation, the webhook or
+  "Start with Windows" switched on must not turn those on somewhere else: the module can run
+  unattended, listen on a port and start at login, so it is only ever enabled on the PC
+  itself. The restore keeps the current `automation` block and the result tells the user.
 
 ## i18n
 

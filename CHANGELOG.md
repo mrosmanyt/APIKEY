@@ -40,6 +40,11 @@ All notable changes to AI Hub are documented here. The format follows
   AES-256-GCM (random 12-byte IV). Import asks for the passphrase, reports a wrong
   passphrase clearly without changing any data, and can import everything except the keys.
   Passphrases and keys are never logged. Backup format version 2.
+- Restoring a backup validates its settings field by field with the same schema as the
+  Settings screen; unknown or invalid fields are skipped (and listed) instead of being copied
+  in. **Automation settings are never restored**: Automation, tray mode, start with Windows
+  and the webhook stay as they are on this PC. Cached model/voice lists are not restored either
+  (they refresh from the providers).
 
 ### Changed
 - License tools are now dependency-free Node scripts (`tools/*.mjs`): they run on Windows
