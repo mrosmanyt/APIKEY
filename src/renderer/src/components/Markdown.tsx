@@ -31,7 +31,7 @@ function Pre({ children }: { children?: ReactNode }) {
 
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
   return (
-    <div className="markdown">
+    <div className="markdown" dir="auto">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}

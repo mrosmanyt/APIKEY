@@ -39,6 +39,8 @@ export const zAttachment = z.object({
   mime: z.string().max(200),
   kind: z.enum(['image', 'text']),
   size: z.number().nonnegative(),
+  pages: z.number().int().nonnegative().optional(),
+  truncated: z.boolean().optional(),
   dataBase64: z
     .string()
     .max(30 * MB)
@@ -101,7 +103,19 @@ export const zImageRequest = z.object({
   prompt: z.string().min(1).max(32_000),
   negativePrompt: z.string().max(8000).optional(),
   size: z.string().max(40).optional(),
-  count: z.number().int().min(1).max(10)
+  count: z.number().int().min(1).max(10),
+  reference: z
+    .object({
+      imageId: zId.optional(),
+      base64: z
+        .string()
+        .max(30 * MB)
+        .optional(),
+      mime: z.string().max(100).optional()
+    })
+    .refine((r) => Boolean(r.imageId) !== Boolean(r.base64), 'Give either imageId or base64')
+    .optional(),
+  strength: z.number().min(0).max(1).optional()
 })
 
 export const zTtsRequest = z.object({
@@ -138,6 +152,30 @@ export const zVideoRequest = z.object({
 
 const zModeDefault = z.object({ providerId: z.string().max(40), model: z.string().max(300) })
 
+export const zPriceRow = z.object({
+  id: z.string().min(1).max(300),
+  providerId: z.string().max(40),
+  model: z.string().min(1).max(300),
+  input: z.number().min(0).max(1_000_000),
+  output: z.number().min(0).max(1_000_000)
+})
+
+export const zEnhanceRequest = z.object({
+  providerId: zProviderId,
+  model: z.string().min(1).max(300),
+  prompt: z.string().min(1).max(20_000),
+  target: z.enum(['chat', 'image', 'video'])
+})
+
+export const zExtractRequest = z.object({
+  name: z.string().min(1).max(500),
+  mime: z.string().max(200),
+  base64: z
+    .string()
+    .min(1)
+    .max(70 * MB)
+})
+
 export const zSettingsPatch = z
   .object({
     theme: z.enum(['system', 'light', 'dark']),
@@ -147,7 +185,9 @@ export const zSettingsPatch = z
     chat: z.object({
       temperature: z.number().min(0).max(2),
       maxTokens: z.number().int().min(1).max(1_000_000)
-    })
+    }),
+    prices: z.array(zPriceRow).max(2000),
+    onboardingCompleted: z.boolean()
   })
   .partial()
 

@@ -14,12 +14,12 @@ const ID = 'anthropic'
 const DEFAULT_MAX_TOKENS = 4096
 
 const CHAT_MODELS: ModelInfo[] = [
-  { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', vision: true },
-  { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', vision: true },
-  { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', vision: true },
-  { id: 'claude-opus-4-1', name: 'Claude Opus 4.1', vision: true },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', vision: true },
-  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', vision: true }
+  { id: 'claude-opus-5-5', name: 'Claude Opus 5.5', vision: true, contextWindow: 200_000 },
+  { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', vision: true, contextWindow: 200_000 },
+  { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', vision: true, contextWindow: 200_000 },
+  { id: 'claude-opus-4-1', name: 'Claude Opus 4.1', vision: true, contextWindow: 200_000 },
+  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', vision: true, contextWindow: 200_000 },
+  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', vision: true, contextWindow: 200_000 }
 ]
 
 export function anthropicHeaders(apiKey: string) {

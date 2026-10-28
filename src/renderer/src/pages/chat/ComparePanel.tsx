@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { newId } from '@shared/ids'
 import type { AppErrorInfo, TokenUsage } from '@shared/types'
 import { CopyButton } from '../../components/CopyButton'
@@ -10,6 +10,7 @@ import { t } from '../../i18n'
 import { startChatStream, stopChatStream } from '../../lib/chatStream'
 import { modelsFor, usableProviders, useApp } from '../../lib/store'
 import type { Selection } from '../../lib/selection'
+import { SHORTCUT_EVENT, type ShortcutAction } from '../../lib/shortcuts'
 
 interface Column {
   key: string
@@ -50,6 +51,16 @@ export function ComparePanel() {
   const patch = (key: string, fn: (c: Column) => Column) =>
     setColumns((cols) => cols.map((c) => (c.key === key ? fn(c) : c)))
   const busy = columns.some((c) => c.requestId)
+  const page = useApp((s) => s.page)
+
+  useEffect(() => {
+    const onShortcut = (e: Event) => {
+      if ((e as CustomEvent<ShortcutAction>).detail.type !== 'stop' || page !== 'chat') return
+      colsRef.current.forEach((c) => c.requestId && stopChatStream(c.requestId))
+    }
+    window.addEventListener(SHORTCUT_EVENT, onShortcut)
+    return () => window.removeEventListener(SHORTCUT_EVENT, onShortcut)
+  }, [page])
 
   const sendAll = () => {
     if (!prompt.trim() || busy) return
@@ -84,7 +95,7 @@ export function ComparePanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2 px-4 pt-3 text-sm text-slate-500">
-        <span className="mr-auto">{t('compare.hint')}</span>
+        <span className="me-auto">{t('compare.hint')}</span>
         {columns.length < 3 && (
           <button
             className="btn-secondary btn-sm"
@@ -149,7 +160,7 @@ export function ComparePanel() {
                   })}
                 </span>
               )}
-              <span className="ml-auto" />
+              <span className="ms-auto" />
               {col.text && <CopyButton text={col.text} />}
             </div>
           </div>

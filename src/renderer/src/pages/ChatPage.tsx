@@ -3,6 +3,7 @@ import { CODE_SYSTEM_PROMPT } from '@shared/defaults'
 import { newId } from '@shared/ids'
 import type { Attachment, ChatMessage, Conversation, ConversationMode } from '@shared/types'
 import { Composer } from '../components/Composer'
+import { EnhanceButton } from '../components/EnhanceButton'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 import { ProviderModelPicker } from '../components/ProviderModelPicker'
@@ -11,6 +12,7 @@ import { t } from '../i18n'
 import { api, call } from '../lib/api'
 import { startChatStream, stopChatStream } from '../lib/chatStream'
 import { useModelInfo, useSelection, type Selection } from '../lib/selection'
+import { SHORTCUT_EVENT, type ShortcutAction } from '../lib/shortcuts'
 import { useApp } from '../lib/store'
 import { ChatSettingsModal } from './chat/ChatSettingsModal'
 import { CodePanel } from './chat/CodePanel'
@@ -192,6 +194,32 @@ export function ChatPage({ mode }: { mode: ConversationMode }) {
     setDraft('')
   }
 
+  // Keyboard shortcuts (dispatched by App). Code handles them only while visible; Chat handles
+  // "new chat" from any other screen too (it navigates to Chat).
+  const page = useApp((s) => s.page)
+  const shortcutRef = useRef({ startNew, requestId, view, page })
+  shortcutRef.current = { startNew, requestId, view, page }
+  useEffect(() => {
+    const onShortcut = (e: Event) => {
+      const action = (e as CustomEvent<ShortcutAction>).detail
+      const cur = shortcutRef.current
+      const visible = cur.page === mode
+      if (action.type === 'newChat') {
+        if (mode === 'code' ? !visible : cur.page === 'code') return
+        cur.startNew()
+        setView('single')
+      } else if (action.type === 'stop' && visible && cur.requestId) {
+        stopChatStream(cur.requestId)
+      } else if (action.type === 'focusInput' && visible && cur.view === 'single') {
+        document.querySelectorAll<HTMLTextAreaElement>('textarea[data-composer]').forEach((el) => {
+          if (el.offsetParent !== null) el.focus()
+        })
+      }
+    }
+    window.addEventListener(SHORTCUT_EVENT, onShortcut)
+    return () => window.removeEventListener(SHORTCUT_EVENT, onShortcut)
+  }, [mode])
+
   const allowImages = modelInfo?.vision !== false
   const busy = Boolean(requestId)
   const isCode = mode === 'code'
@@ -277,11 +305,23 @@ export function ChatPage({ mode }: { mode: ConversationMode }) {
               onStop={() => requestId && stopChatStream(requestId)}
               value={draft}
               onValueChange={setDraft}
+              contextWindow={modelInfo?.contextWindow}
               extraButtons={
-                <PromptPickerButton
-                  modes={[mode, 'any']}
-                  onPick={(text) => setDraft((d) => (d ? `${d}\n${text}` : text))}
-                />
+                <>
+                  <PromptPickerButton
+                    modes={[mode, 'any']}
+                    onPick={(text) => setDraft((d) => (d ? `${d}\n${text}` : text))}
+                  />
+                  {!isCode && (
+                    <EnhanceButton
+                      target="chat"
+                      value={draft}
+                      onChange={setDraft}
+                      selection={sel}
+                      compact
+                    />
+                  )}
+                </>
               }
             />
           </div>

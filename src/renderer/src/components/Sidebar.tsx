@@ -17,6 +17,7 @@ export function Sidebar() {
   const page = useApp((s) => s.page)
   const navigate = useApp((s) => s.navigate)
   const updateSettings = useApp((s) => s.updateSettings)
+  const setShortcutsOpen = useApp((s) => s.setShortcutsOpen)
   const dark = useIsDark()
 
   const item = (p: Page, icon: IconName) => (
@@ -37,7 +38,7 @@ export function Sidebar() {
   )
 
   return (
-    <nav className="flex w-16 shrink-0 flex-col gap-1 border-r border-slate-200 bg-slate-100 p-2 dark:border-slate-800 dark:bg-slate-900 lg:w-52">
+    <nav className="flex w-16 shrink-0 flex-col gap-1 border-e border-slate-200 bg-slate-100 p-2 dark:border-slate-800 dark:bg-slate-900 lg:w-52">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 text-sm font-bold text-white">
           AI
@@ -55,6 +56,14 @@ export function Sidebar() {
           <span className="hidden lg:inline">
             {dark ? t('settings.theme_light') : t('settings.theme_dark')}
           </span>
+        </button>
+        <button
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
+          onClick={() => setShortcutsOpen(true)}
+          title={t('shortcuts.button')}
+        >
+          <Icon name="keyboard" className="h-5 w-5 shrink-0" />
+          <span className="hidden lg:inline">{t('shortcuts.button')}</span>
         </button>
         {item('settings', 'settings')}
       </div>

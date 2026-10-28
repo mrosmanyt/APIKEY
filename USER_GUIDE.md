@@ -40,6 +40,13 @@ On first launch, paste the **license key** you received after purchase (it start
 `AIHUB1.`) and click **Activate**. Activation works offline. You can see your license under
 **Settings → About**.
 
+### Setup wizard
+
+Right after activation, a short **setup wizard** opens: a welcome page, a page to add your API
+keys (with **Get a key** links to each provider), and a page to **Test** every key. Click
+**Start using AI Hub** when you're done, or **Skip setup** to do it later. You can run it again
+from **Settings → General → Run the setup wizard again**.
+
 ## 3. Add your API keys
 
 Open **Settings → API Keys**. For each provider you want to use:
@@ -62,6 +69,12 @@ belong to.
 | **Anthropic Claude** | https://console.anthropic.com/settings/keys | Buy credits under Plans & Billing. Chat only. |
 | **Google Gemini** | https://aistudio.google.com/app/apikey | Free tier available; some image/video models (Imagen, Veo) need billing enabled. |
 | **xAI Grok** | https://console.x.ai | Chat and images; video is in **Beta**. |
+| **OpenRouter** | https://openrouter.ai/keys | One key for hundreds of models. Refreshing its model list also fills in prices for cost estimates. |
+| **Groq** | https://console.groq.com/keys | Very fast open models, free tier; also Whisper speech-to-text. |
+| **DeepSeek** | https://platform.deepseek.com/api_keys | Low-cost chat and reasoning models. |
+| **Mistral AI** | https://console.mistral.ai/api-keys | Mistral Large/Medium/Small and Codestral. |
+| **Stability AI** | https://platform.stability.ai/account/keys | Image generation, image-to-image and upscaling (Beta). |
+| **Ollama (local)** | https://ollama.com/download | **No key.** Install Ollama, download a model (e.g. `ollama pull llama3.2`), then click **Test connection** in Settings. Free and private. |
 | **ElevenLabs** | https://elevenlabs.io/app/settings/api-keys | Voices (text-to-speech) and transcription. Give the key access to Text to Speech, Voices and Speech to Text. |
 | **Custom (OpenAI-compatible)** | Depends on the service | For OpenRouter (https://openrouter.ai/keys), Groq (https://console.groq.com/keys), DeepSeek (https://platform.deepseek.com/api_keys), Together, Mistral, or local apps like Ollama / LM Studio. |
 
@@ -82,8 +95,18 @@ Pick a **provider** and **model** at the top, type a message and press **Enter**
 
 - **Stop** halts the answer. Hover a message to **Copy**, **Regenerate** the last answer, or
   **Edit** your last message and resend.
-- **📎** attaches images (for models that can see images) or text/code files. You can also
-  drag & drop or paste.
+- **📎** attaches images (for models that can see images), documents (**PDF, DOCX**) or
+  text/code files (**TXT**, code…). You can also drag & drop or paste. The text of documents
+  is read on your PC and sent with your message; each attachment shows its size in tokens
+  (pages for PDFs). Scanned PDFs (images only) contain no text — attach them as images
+  instead. Old `.doc` files: save as `.docx` first.
+- If attachments are too big for the selected model, a yellow warning appears — remove some
+  files or pick a model with a larger context window. Very long files are cut and marked
+  **truncated**.
+- **✨ Enhance** rewrites a short prompt into a detailed one using your chat model. Click
+  **Undo** to get your original text back.
+- Under each answer you see the tokens used and an **approximate cost** (≈ $0.0012). "≈" in
+  front of the tokens means the provider didn't report them and AI Hub estimated them.
 - **⚙ (sliders)** sets the system prompt (instructions for the assistant), temperature
   (creativity) and max tokens (answer length).
 - **🔄** next to the model refreshes the model list from the provider. Choose
@@ -96,7 +119,18 @@ the buttons to copy them or **save to a file**.
 
 ### Images
 Pick provider/model, write a prompt (and a negative prompt when supported), choose size or
-aspect ratio and number of images, then **Generate**. Images are saved automatically to your
+aspect ratio and number of images, then **Generate**. **✨ Enhance** turns a short idea into a
+detailed image prompt.
+
+**Image tools:**
+- **Reference image** — click the layers icon on a gallery image (**Use as reference**) or
+  **Upload reference image**, describe the change, and generate. Supported by OpenAI GPT Image,
+  Gemini 2.5 Flash Image and Stability AI (SD 3.5; Stable Image Ultra is Beta). **Change
+  strength** controls how far the result may move away from the reference (Stability).
+- **Upscale** (expand icon) — makes a larger, sharper copy (Stability AI, Beta).
+- **Variations** (columns icon) — creates two variations of an image (OpenAI DALL·E 2; the
+  image must be square). Results are labelled *From reference*, *Upscaled* or *Variation*.
+ Images are saved automatically to your
 output folder (default `Documents\AI Hub\images`) with a `.json` file describing the prompt.
 Click an image to view it large; use the buttons to copy, show in folder, save a copy, reuse
 the prompt or delete.
@@ -108,7 +142,8 @@ the prompt or delete.
   access if Windows asks), optionally set a language code like `en`, then **Transcribe**.
 
 ### Video
-Write a prompt, optionally choose a start image, size and duration, then **Create video**.
+Write a prompt (or a short idea + **✨ Enhance**), optionally choose a start image, size and
+duration, then **Create video**.
 Features marked **Beta** (xAI video, and starting a Veo video from an image) are new and may
 not work yet with every account.
 Videos take a few minutes; you can use other screens meanwhile — jobs keep running and even
@@ -125,9 +160,17 @@ Audio screens.
 ### Settings
 - **API Keys** — add, test, replace and delete keys.
 - **Defaults** — provider/model selected by default on each screen.
-- **General** — theme, language, output folder, default temperature/max tokens, logs folder.
-- **Usage** — requests, tokens (when the provider reports them), images, audio and videos per
-  provider. Counted on your PC only; check the provider's website for exact billing.
+- **General** — theme, **language** (English or **اردو Urdu**, with a right-to-left layout),
+  output folder, default temperature/max tokens, logs folder, and **Run the setup wizard
+  again**.
+- **Defaults** — also lets you choose the **Prompt enhancer** model.
+- **Usage** — **estimated cost by month** per provider (click a provider to see each model),
+  plus all-time requests, tokens, images, audio and videos. Counted on your PC only; your
+  provider's bill is the real amount.
+- **Prices** — the price table used for cost estimates, in US dollars per 1 million tokens
+  (input and output). The defaults are approximate; check your provider's pricing page and
+  edit them. **Model** can be an exact name, a prefix ending in `*` (e.g. `gpt-4o*`) or `*` for
+  every model of that provider. Models without a price show "no price" and an asterisk.
 - **Backup** — export settings, conversations, prompts and usage to one file, and import it on
   another PC. Tick **Include API keys (encrypted)** to also back up your keys: you must choose
   a **passphrase** (at least 8 characters, typed twice). The keys are encrypted with it; when
@@ -137,6 +180,21 @@ Audio screens.
   file still contains your keys, so keep it private.
 - **About** — version, license and data folder.
 
+### Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl+N** | New chat (on the Code screen: new code chat) |
+| **Enter** / **Shift+Enter** | Send / new line |
+| **Esc** | Stop the answer being generated (or close a dialog) |
+| **Ctrl+L** | Jump to the message box |
+| **Ctrl+1 … Ctrl+8** | Chat, Images, Video, Audio, Code, History, Prompts, Settings |
+| **Ctrl+,** | Settings |
+| **Ctrl+/** or **F1** | Show all shortcuts |
+
+Click **Keyboard shortcuts** in the sidebar to see this list in the app. Shortcuts also work
+with an Urdu keyboard layout.
+
 ## 5. Troubleshooting
 
 | Message | What to do |
@@ -145,6 +203,9 @@ Audio screens.
 | **No balance or quota left** | Add credit / enable billing on the provider's website. |
 | **Rate limited** | AI Hub already retried automatically. Wait a minute and try again, or use a cheaper/faster model. |
 | **Network problem** / offline banner | Check your internet, VPN, proxy or firewall. Corporate networks may block AI services. |
+| **Could not reach Ollama** | Start the Ollama app (or run `ollama serve`), make sure you downloaded a model (`ollama pull llama3.2`), then click **Test connection**. |
+| **Attachment too large** | Remove some files, or choose a model with a bigger context (e.g. Gemini 2.5, GPT-4.1). |
+| **No text found in this PDF** | It is a scanned document. Attach it as an image instead, or use a PDF with selectable text. |
 | **Model not found** | The model was renamed or your account has no access. Click 🔄 to refresh models and pick another one. |
 | **Blocked by content policy** | The provider refused the request. Rephrase the prompt. |
 | Key shows **Not tested** | The test could not reach the provider; check your connection and click **Test key**. |

@@ -161,3 +161,67 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
   can license would be useless).
 - `.gitattributes` forces LF so a Windows checkout (Git's `core.autocrlf`) can't produce CRLF
   files that fail the Prettier check in CI.
+
+## Providers added in v1.1
+
+- **OpenRouter, Groq, DeepSeek, Mistral** share `compatProvider()`. `stream_options.include_usage`
+  is only sent to servers known to accept it (OpenAI, xAI, DeepSeek, OpenRouter); Groq's
+  usage is read from `x_groq.usage`; everything else falls back to a local estimate.
+- OpenRouter's key test uses `GET /auth/key` (`TODO(verify)`); its `/models` list provides
+  per-token prices, converted to USD per 1M tokens and used for cost estimates.
+- **Mistral** image input is disabled: its image part format differs from OpenAI's.
+- **Ollama** is a keyless provider (`keyOptional`): "Test connection" stores an empty key entry
+  so the existing status logic works; no `Authorization` header is sent. Its model list comes
+  from `/api/tags` and is refreshed automatically after a successful test (also for any
+  provider without built-in models, e.g. Custom).
+- **Stability AI** uses the v2beta Stable Image endpoints with `Accept: image/*`. A
+  `finish-reason: CONTENT_FILTERED` header (HTTP 200 with a blurred image) is turned into a
+  content-policy error, and HTTP 403 moderation errors are now classified as content policy
+  before the generic "403 = invalid key" rule. Upscaling (`/upscale/fast`) and Ultra's
+  image-to-image are marked Beta / `TODO(verify)`.
+
+## Cost estimates
+
+- Prices live in `settings.prices` (USD per 1M tokens), seeded with approximate list prices
+  from `src/shared/pricing.ts`. Matching: exact model id > longest `prefix*` > `*`; then
+  provider-reported pricing (OpenRouter); otherwise "no price" (never guessed).
+- Usage is stored per month / provider / model as **tokens**, and cost is computed when
+  displayed — editing a price immediately corrects past months too.
+- Providers that report no usage get a local estimate (~4 characters per token), flagged
+  `estimated` and shown with "≈". Stopped answers record the tokens produced so far.
+- Only chat tokens are priced; images, audio and video are counted but not priced (their
+  pricing models differ per provider).
+
+## Documents in chat
+
+- PDF (via `unpdf`, a dependency-free pdf.js build), DOCX (`mammoth`) and TXT are extracted in
+  the **main process** (no PDF worker or CSP changes in the renderer); text is cleaned, PDF
+  pages are labelled, and output is capped at 1.5M characters (marked truncated).
+- The "too large" warning compares an estimate of attachment tokens with the model's
+  `contextWindow` (80% threshold, leaving room for the answer); unknown models assume 128k
+  and say so.
+
+## Image tools
+
+- Optional adapter methods `image.upscale` / `image.vary` and per-model `supportsReference`;
+  the UI shows a tool only when at least one usable provider offers it, and asks which
+  provider when several do. Results record `operation` and `sourceImageId`.
+
+## Prompt enhancer
+
+- Non-streaming call through the normal chat adapter with a target-specific system prompt
+  (chat / image / video); the reply is cleaned of "Here is…" wrappers, quotes and fences.
+  Model choice: current chat selection → "Prompt enhancer" default → Chat default → first
+  usable chat model. Usage and cost are recorded like any chat request.
+
+## Onboarding, Urdu, shortcuts
+
+- The wizard is driven by `settings.onboardingCompleted`; users upgrading with keys already
+  saved skip it automatically. It reuses the Settings provider cards.
+- Urdu: `ur.ts` is typed as `Dictionary`, so a missing key fails the build; a test checks
+  identical `{placeholders}` and that every value is in Urdu script. RTL uses `dir="rtl"` on
+  `<html>` plus Tailwind logical classes (`ms-/me-/ps-/pe-/border-s/e/text-start/end`); code,
+  keys, URLs and numbers stay LTR, and message bodies use `dir="auto"`. Changing the language
+  remounts the main layout so every screen re-renders.
+- Shortcuts match physical key codes (`e.code`) so they work on any keyboard layout; Esc
+  closes dialogs before it stops generation.

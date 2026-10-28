@@ -80,7 +80,7 @@ export function HistoryPage() {
                   </form>
                 ) : (
                   <button
-                    className="block w-full truncate text-left font-medium hover:text-brand-600"
+                    className="block w-full truncate text-start font-medium hover:text-brand-600"
                     onClick={() => openConversationIn(c.mode, c.id)}
                   >
                     {c.title}

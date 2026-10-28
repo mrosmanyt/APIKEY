@@ -26,7 +26,9 @@ import type {
   SttRequest,
   SttResult,
   TtsRequest,
-  UsageStats,
+  UsageReport,
+  EnhanceRequest,
+  ExtractedFile,
   VideoJob,
   VideoRequest,
   VoiceInfo
@@ -53,6 +55,8 @@ export interface AiHubApi {
     saveKey(providerId: string, key: string): R<ProviderStatus[]>
     deleteKey(providerId: string): R<ProviderStatus[]>
     testKey(providerId: string): R<ProviderStatus>
+    /** Connect a provider that needs no key (e.g. Ollama) and test it. */
+    connect(providerId: string): R<ProviderStatus>
     setConfig(providerId: string, config: Record<string, string>): R<ProviderStatus[]>
     listModels(providerId: string, capability: Capability): R<ModelInfo[]>
     listVoices(providerId: string): R<VoiceInfo[]>
@@ -74,10 +78,14 @@ export interface AiHubApi {
   files: {
     /** Opens a save dialog; returns the chosen path or null if cancelled. */
     saveText(defaultName: string, content: string): R<string | null>
+    /** Extract text from a PDF, DOCX or TXT file locally. */
+    extract(file: { name: string; mime: string; base64: string }): R<ExtractedFile>
   }
   images: {
     generate(req: ImageRequest): R<GeneratedImage[]>
     list(): R<GeneratedImage[]>
+    upscale(id: string, providerId: string): R<GeneratedImage>
+    vary(id: string, providerId: string, count: number): R<GeneratedImage[]>
     delete(id: string): R<void>
     copy(id: string): R<void>
     reveal(id: string): R<void>
@@ -106,8 +114,11 @@ export interface AiHubApi {
     chooseOutputDir(): R<Settings | null>
   }
   usage: {
-    get(): R<UsageStats>
-    reset(): R<UsageStats>
+    get(): R<UsageReport>
+    reset(): R<UsageReport>
+  }
+  prompt: {
+    enhance(req: EnhanceRequest): R<string>
   }
   prompts: {
     list(): R<SavedPrompt[]>
@@ -140,6 +151,7 @@ export const INVOKE_CHANNELS = [
   'providers:saveKey',
   'providers:deleteKey',
   'providers:testKey',
+  'providers:connect',
   'providers:setConfig',
   'providers:listModels',
   'providers:listVoices',
@@ -153,8 +165,11 @@ export const INVOKE_CHANNELS = [
   'conversations:delete',
   'conversations:export',
   'files:saveText',
+  'files:extract',
   'images:generate',
   'images:list',
+  'images:upscale',
+  'images:vary',
   'images:delete',
   'images:copy',
   'images:reveal',
@@ -176,6 +191,7 @@ export const INVOKE_CHANNELS = [
   'settings:chooseOutputDir',
   'usage:get',
   'usage:reset',
+  'prompt:enhance',
   'prompts:list',
   'prompts:save',
   'prompts:delete',

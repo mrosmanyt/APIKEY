@@ -5,7 +5,20 @@ import type { ProviderAdapter } from '../src/providers/types'
 describe('provider registry', () => {
   it('contains all built-in providers with unique ids', () => {
     const ids = registry.list().map((a) => a.id)
-    expect(ids).toEqual(['openai', 'anthropic', 'gemini', 'xai', 'elevenlabs', 'custom'])
+    expect(ids).toEqual([
+      'openai',
+      'anthropic',
+      'gemini',
+      'xai',
+      'elevenlabs',
+      'stability',
+      'openrouter',
+      'groq',
+      'deepseek',
+      'mistral',
+      'ollama',
+      'custom'
+    ])
     expect(new Set(ids).size).toBe(ids.length)
   })
 
@@ -19,11 +32,25 @@ describe('provider registry', () => {
       'anthropic',
       'gemini',
       'xai',
+      'openrouter',
+      'groq',
+      'deepseek',
+      'mistral',
+      'ollama',
       'custom'
     ])
-    expect(registry.withCapability('image').map((a) => a.id)).toEqual(['openai', 'gemini', 'xai'])
+    expect(registry.withCapability('image').map((a) => a.id)).toEqual([
+      'openai',
+      'gemini',
+      'xai',
+      'stability'
+    ])
     expect(registry.withCapability('tts').map((a) => a.id)).toEqual(['openai', 'elevenlabs'])
-    expect(registry.withCapability('stt').map((a) => a.id)).toEqual(['openai', 'elevenlabs'])
+    expect(registry.withCapability('stt').map((a) => a.id)).toEqual([
+      'openai',
+      'elevenlabs',
+      'groq'
+    ])
     expect(registry.withCapability('video').map((a) => a.id)).toEqual(['openai', 'gemini', 'xai'])
     expect(registry.has('anthropic', 'image')).toBe(false)
     expect(registry.has('nope')).toBe(false)
@@ -38,6 +65,30 @@ describe('provider registry', () => {
     expect(openai.capabilities.tts!.voices.length).toBeGreaterThan(0)
     expect(openai.canListModels).toBe(true)
     expect(infos.find((i) => i.id === 'xai')!.capabilities.video!.experimental).toBe(true)
+  })
+
+  it('describes keyless providers and image tools', () => {
+    const infos = registry.listInfo()
+    const info = (id: string) => infos.find((i) => i.id === id)!
+    expect(info('ollama').keyOptional).toBe(true)
+    expect(info('openai').keyOptional).toBeUndefined()
+    expect(info('openai').capabilities.image).toMatchObject({
+      canVary: true,
+      variationModel: 'dall-e-2'
+    })
+    expect(info('openai').capabilities.image!.canUpscale).toBeUndefined()
+    expect(info('stability').capabilities.image).toMatchObject({
+      canUpscale: true,
+      upscaleBeta: true
+    })
+    expect(
+      info('gemini').capabilities.image!.models.find((m) => m.id === 'gemini-2.5-flash-image')!
+        .supportsReference
+    ).toBe(true)
+    expect(
+      info('stability').capabilities.image!.models.find((m) => m.id === 'stable-image-ultra')!
+        .referenceBeta
+    ).toBe(true)
   })
 
   it('flags beta video features for the UI', () => {

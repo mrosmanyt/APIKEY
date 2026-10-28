@@ -36,6 +36,7 @@ const api: AiHubApi = {
     saveKey: (id, key) => invoke('providers:saveKey', id, key),
     deleteKey: (id) => invoke('providers:deleteKey', id),
     testKey: (id) => invoke('providers:testKey', id),
+    connect: (id) => invoke('providers:connect', id),
     setConfig: (id, config) => invoke('providers:setConfig', id, config),
     listModels: (id, capability) => invoke('providers:listModels', id, capability),
     listVoices: (id) => invoke('providers:listVoices', id)
@@ -55,11 +56,14 @@ const api: AiHubApi = {
     export: (id, format) => invoke('conversations:export', id, format)
   },
   files: {
-    saveText: (name, content) => invoke('files:saveText', name, content)
+    saveText: (name, content) => invoke('files:saveText', name, content),
+    extract: (file) => invoke('files:extract', file)
   },
   images: {
     generate: (req) => invoke('images:generate', req),
     list: () => invoke('images:list'),
+    upscale: (id, providerId) => invoke('images:upscale', id, providerId),
+    vary: (id, providerId, count) => invoke('images:vary', id, providerId, count),
     delete: (id) => invoke('images:delete', id),
     copy: (id) => invoke('images:copy', id),
     reveal: (id) => invoke('images:reveal', id),
@@ -90,6 +94,9 @@ const api: AiHubApi = {
   usage: {
     get: () => invoke('usage:get'),
     reset: () => invoke('usage:reset')
+  },
+  prompt: {
+    enhance: (req) => invoke('prompt:enhance', req)
   },
   prompts: {
     list: () => invoke('prompts:list'),

@@ -10,6 +10,7 @@ import crypto from 'node:crypto'
 import type {
   BackupImportPreview,
   Conversation,
+  MonthlyUsage,
   RestoreResult,
   SavedPrompt,
   Settings,
@@ -55,6 +56,7 @@ export interface BackupFile {
   conversations: Conversation[]
   prompts: SavedPrompt[]
   usage: UsageStats
+  usageMonthly?: MonthlyUsage
   encryptedKeys?: EncryptedKeys
   /** Legacy v1 plain-text keys. Read for compatibility, never written. */
   keys?: Record<string, string>
@@ -152,7 +154,8 @@ export function createBackup(
     settings: storage.settings.get(),
     conversations: storage.conversations.all(),
     prompts: storage.prompts.all(),
-    usage: storage.usage.get()
+    usage: storage.usage.get(),
+    usageMonthly: storage.usage.monthly()
   }
   if (opts.includeKeys) {
     assertPassphrase(opts.passphrase)
@@ -190,6 +193,7 @@ export function parseBackup(text: string): BackupFile {
     conversations: Array.isArray(b.conversations) ? b.conversations : [],
     prompts: Array.isArray(b.prompts) ? b.prompts : [],
     usage: b.usage && typeof b.usage === 'object' ? b.usage : {},
+    usageMonthly: b.usageMonthly && typeof b.usageMonthly === 'object' ? b.usageMonthly : undefined,
     encryptedKeys:
       enc && typeof enc === 'object' && typeof enc.ciphertext === 'string' ? enc : undefined,
     keys: b.keys && typeof b.keys === 'object' ? b.keys : undefined
@@ -250,7 +254,7 @@ export function restoreBackup(
       prompts++
     }
   }
-  if (backup.usage) storage.usage.replace(backup.usage)
+  if (backup.usage) storage.usage.replace(backup.usage, backup.usageMonthly)
   let keys = 0
   for (const [id, key] of Object.entries(keysToRestore)) {
     if (typeof key === 'string' && key.trim() && /^[a-z0-9_-]{1,40}$/.test(id)) {

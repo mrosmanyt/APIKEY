@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Attachment } from '@shared/types'
 import { t } from '../i18n'
-import { fileToAttachment, formatBytes, MAX_IMAGE_MB, MAX_TEXT_MB } from '../lib/files'
+import {
+  fileToAttachment,
+  formatBytes,
+  MAX_DOCUMENT_MB,
+  MAX_IMAGE_MB,
+  MAX_TEXT_MB
+} from '../lib/files'
+import { attachmentTokens, formatTokens, sizeWarning } from '../lib/tokens'
 import { useApp } from '../lib/store'
 import { Icon } from './Icon'
 
@@ -13,7 +20,8 @@ export function Composer({
   allowImages,
   extraButtons,
   value,
-  onValueChange
+  onValueChange,
+  contextWindow
 }: {
   placeholder: string
   busy: boolean
@@ -23,6 +31,8 @@ export function Composer({
   extraButtons?: ReactNode
   value: string
   onValueChange: (v: string) => void
+  /** Selected model's context window (tokens), for the "too large" warning. */
+  contextWindow?: number
 }) {
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
@@ -39,21 +49,33 @@ export function Composer({
   const addFiles = async (files: FileList | File[]) => {
     for (const f of Array.from(files)) {
       const res = await fileToAttachment(f)
-      if (res.ok) setAttachments((a) => [...a, res.attachment])
-      else if (res.reason === 'too_large')
+      if (res.ok) {
+        setAttachments((a) => [...a, res.attachment])
+        if (res.attachment.truncated)
+          showToast(t('chat.attachmentTruncated', { name: f.name }), 'error')
+      } else if (res.reason === 'too_large')
         showToast(
           t('chat.attachmentTooLarge', {
             name: f.name,
-            max: f.type.startsWith('image/') ? MAX_IMAGE_MB : MAX_TEXT_MB
+            max: f.type.startsWith('image/')
+              ? MAX_IMAGE_MB
+              : /\.(pdf|docx)$/i.test(f.name)
+                ? MAX_DOCUMENT_MB
+                : MAX_TEXT_MB
           }),
           'error'
         )
+      else if (res.reason === 'error') showToast(`${f.name}: ${res.error.message}`, 'error')
       else showToast(t('chat.attachmentUnsupported', { name: f.name }), 'error')
     }
   }
 
   const hasImages = attachments.some((a) => a.kind === 'image')
   const blocked = hasImages && !allowImages
+  const size = sizeWarning(
+    attachmentTokens(attachments) + Math.ceil(value.length / 4),
+    contextWindow
+  )
 
   const send = () => {
     if (busy || blocked || (!value.trim() && attachments.length === 0)) return
@@ -87,7 +109,17 @@ export function Composer({
                 <Icon name="code" className="h-4 w-4" />
               )}
               <span className="max-w-[12rem] truncate">{a.name}</span>
-              <span className="text-slate-500">{formatBytes(a.size)}</span>
+              <span className="text-slate-500">
+                {a.pages ? `${t('chat.pages', { count: a.pages })} · ` : ''}
+                {a.text !== undefined
+                  ? t('chat.approxTokens', { tokens: formatTokens(Math.ceil(a.text.length / 4)) })
+                  : formatBytes(a.size)}
+              </span>
+              {a.truncated && (
+                <span className="badge bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                  {t('chat.truncated')}
+                </span>
+              )}
               <button
                 className="text-slate-500 hover:text-red-600"
                 onClick={() => setAttachments((x) => x.filter((y) => y.id !== a.id))}
@@ -100,6 +132,28 @@ export function Composer({
         </div>
       )}
       {blocked && <div className="mb-2 text-xs text-amber-600">{t('chat.visionUnsupported')}</div>}
+      {size.level === 'too_large' && (
+        <div
+          className="mb-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+          role="alert"
+        >
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {t(size.assumed ? 'chat.tooLargeUnknown' : 'chat.tooLarge', {
+              tokens: formatTokens(size.tokens),
+              limit: formatTokens(size.limit)
+            })}
+          </span>
+        </div>
+      )}
+      {size.level === 'info' && attachments.length > 0 && (
+        <div className="mb-2 text-xs text-slate-500">
+          {t('chat.contextUse', {
+            tokens: formatTokens(size.tokens),
+            limit: formatTokens(size.limit)
+          })}
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <input
           ref={fileRef}
@@ -122,6 +176,8 @@ export function Composer({
         {extraButtons}
         <textarea
           ref={taRef}
+          data-composer="true"
+          dir={value ? 'auto' : undefined}
           rows={1}
           className="input max-h-72 min-h-[42px] flex-1 resize-none"
           placeholder={placeholder}

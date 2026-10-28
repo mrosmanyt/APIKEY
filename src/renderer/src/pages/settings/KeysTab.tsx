@@ -24,10 +24,17 @@ export function StatusBadge({ status }: { status: ProviderStatus['status'] }) {
   )
 }
 
-function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: ProviderStatus }) {
+export function ProviderCard({
+  provider,
+  status
+}: {
+  provider: ProviderInfo
+  status?: ProviderStatus
+}) {
   const setStatuses = useApp((s) => s.setStatuses)
   const refreshProviders = useApp((s) => s.refreshProviders)
   const showToast = useApp((s) => s.showToast)
+  const setSettings = useApp((s) => s.setSettings)
   const [key, setKey] = useState('')
   const [editing, setEditing] = useState(!status?.hasKey)
   const [busy, setBusy] = useState<'save' | 'test' | 'config' | undefined>()
@@ -80,6 +87,28 @@ function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: P
     }
   }
 
+  const connect = async () => {
+    setBusy('test')
+    setError(undefined)
+    try {
+      if (provider.configFields.length) await call(api().providers.setConfig(provider.id, config))
+      const s = await call(api().providers.connect(provider.id))
+      await refreshProviders()
+      setStatuses(await call(api().providers.statuses()))
+      setSettings(await call(api().settings.get()))
+      if (s.status !== 'valid' && s.lastError) setError(s.lastError)
+    } catch (err) {
+      setError(errorInfo(err))
+    } finally {
+      setBusy(undefined)
+    }
+  }
+
+  const disconnect = async () => {
+    setStatuses(await call(api().providers.deleteKey(provider.id)))
+    setError(undefined)
+  }
+
   const remove = async () => {
     if (!window.confirm(t('settings.deleteKeyConfirm', { name: provider.name }))) return
     setStatuses(await call(api().providers.deleteKey(provider.id)))
@@ -95,6 +124,7 @@ function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: P
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{provider.name}</h3>
+            {provider.beta && <BetaBadge />}
             <StatusBadge status={status?.status ?? 'missing'} />
           </div>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{provider.description}</p>
@@ -159,7 +189,32 @@ function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: P
       )}
 
       <div className="mt-4">
-        {status?.hasKey && !editing ? (
+        {provider.keyOptional ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-slate-600 dark:text-slate-300">
+              {t('settings.noKeyNeeded')}
+            </span>
+            {status?.lastTestedAt && (
+              <span className="text-xs text-slate-500">
+                {t('settings.lastTested', { time: formatTime(status.lastTestedAt) })}
+              </span>
+            )}
+            <div className="ms-auto flex gap-2">
+              <button
+                className="btn-primary btn-sm"
+                onClick={connect}
+                disabled={busy !== undefined}
+              >
+                {busy === 'test' ? t('settings.testing') : t('settings.testConnection')}
+              </button>
+              {status?.hasKey && (
+                <button className="btn-ghost btn-sm text-red-600" onClick={disconnect}>
+                  {t('settings.disconnect')}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : status?.hasKey && !editing ? (
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-sm text-slate-600 dark:text-slate-300">
               {t('settings.keySaved', { hint: status.keyHint ?? '' })}
@@ -169,7 +224,7 @@ function ProviderCard({ provider, status }: { provider: ProviderInfo; status?: P
                 {t('settings.lastTested', { time: formatTime(status.lastTestedAt) })}
               </span>
             )}
-            <div className="ml-auto flex gap-2">
+            <div className="ms-auto flex gap-2">
               <button className="btn-primary btn-sm" onClick={test} disabled={busy !== undefined}>
                 {busy === 'test' ? t('settings.testing') : t('settings.testKey')}
               </button>

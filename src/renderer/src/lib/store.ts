@@ -11,8 +11,9 @@ import type {
 import { setLanguage } from '../i18n'
 import { api, call } from './api'
 
-export type Page =
-  'chat' | 'code' | 'images' | 'video' | 'audio' | 'history' | 'prompts' | 'settings'
+import type { Page } from './pages'
+
+export type { Page }
 
 export interface PendingPrompt {
   page: Page
@@ -31,6 +32,8 @@ interface AppState {
   openConversation: { chat?: string; code?: string }
   pendingPrompt?: PendingPrompt
   toast?: { text: string; kind: 'info' | 'error'; id: number }
+  shortcutsOpen: boolean
+  setShortcutsOpen(open: boolean): void
 
   init(): Promise<void>
   navigate(page: Page, opts?: { settingsTab?: string }): void
@@ -51,6 +54,10 @@ export const useApp = create<AppState>((set, get) => ({
   providers: [],
   statuses: {},
   openConversation: {},
+  shortcutsOpen: false,
+  setShortcutsOpen(open) {
+    set({ shortcutsOpen: open })
+  },
 
   async init() {
     const license = await call(api().license.status())
@@ -71,8 +78,13 @@ export const useApp = create<AppState>((set, get) => ({
       settings,
       ready: true
     })
-    // First run: no keys yet -> take the user to the API key settings.
-    if (!statuses.some((s) => s.hasKey)) set({ page: 'settings', settingsTab: 'keys' })
+    if (!statuses.some((s) => s.hasKey)) {
+      // First run: no keys yet -> API key settings behind the setup wizard.
+      set({ page: 'settings', settingsTab: 'keys' })
+    } else if (!settings.onboardingCompleted) {
+      // Users upgrading from a version without the wizard already set up their keys.
+      void get().updateSettings({ onboardingCompleted: true })
+    }
   },
 
   navigate(page, opts) {

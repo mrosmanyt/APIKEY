@@ -16,7 +16,7 @@ export function CodePanel({ messages }: { messages: ChatMessage[] }) {
   )
 
   return (
-    <aside className="hidden w-[26rem] shrink-0 flex-col border-l border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 xl:flex">
+    <aside className="hidden w-[26rem] shrink-0 flex-col border-s border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 xl:flex">
       <div className="border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-800">
         {t('chat.codeBlocks')} ({blocks.length})
       </div>
@@ -32,7 +32,7 @@ export function CodePanel({ messages }: { messages: ChatMessage[] }) {
               className="overflow-hidden rounded-lg border border-slate-700 bg-[#0d1117] text-slate-100"
             >
               <div className="flex items-center gap-1 border-b border-slate-700 px-2 py-1 text-xs text-slate-400">
-                <span className="mr-auto truncate" title={name}>
+                <span className="me-auto truncate" title={name}>
                   {b.fileName ?? b.language}
                 </span>
                 <CopyButton

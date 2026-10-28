@@ -76,7 +76,7 @@ function TtsPanel() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <section className="space-y-4 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:w-[28rem] lg:shrink-0 lg:border-b-0 lg:border-r">
+      <section className="space-y-4 overflow-y-auto border-b border-slate-200 p-4 dark:border-slate-800 lg:w-[28rem] lg:shrink-0 lg:border-b-0 lg:border-e">
         <ProviderModelPicker capability="tts" value={sel} onChange={setSel} />
         <div>
           <label className="label">{t('audio.voice')}</label>
@@ -111,7 +111,7 @@ function TtsPanel() {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <div className="mt-1 text-right text-xs text-slate-500">
+          <div className="mt-1 text-end text-xs text-slate-500">
             {t('audio.chars', { count: text.length })}
           </div>
         </div>

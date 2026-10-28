@@ -54,7 +54,7 @@ export function PromptPickerButton({
               {list.map((p) => (
                 <li key={p.id}>
                   <button
-                    className="w-full rounded-lg border border-slate-200 p-3 text-left hover:border-brand-400 hover:bg-brand-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                    className="w-full rounded-lg border border-slate-200 p-3 text-start hover:border-brand-400 hover:bg-brand-50 dark:border-slate-700 dark:hover:bg-slate-800"
                     onClick={() => {
                       onPick(p.content)
                       setOpen(false)

@@ -9,7 +9,8 @@ const MODES: Array<{ mode: AppMode; capability: Capability }> = [
   { mode: 'image', capability: 'image' },
   { mode: 'video', capability: 'video' },
   { mode: 'tts', capability: 'tts' },
-  { mode: 'stt', capability: 'stt' }
+  { mode: 'stt', capability: 'stt' },
+  { mode: 'enhance', capability: 'chat' }
 ]
 
 export function DefaultsTab() {
