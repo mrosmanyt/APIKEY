@@ -153,7 +153,7 @@ export const en = {
     empty: 'Generated images will appear here.',
     copyImage: 'Copy image',
     reveal: 'Show in folder',
-    reusePrompt: 'Reuse prompt',
+    reapplyPrompt: 'Reuse prompt',
     copiedImage: 'Image copied to clipboard',
     revised: 'Revised prompt'
   },

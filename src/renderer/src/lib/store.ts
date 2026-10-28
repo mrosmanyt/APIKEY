@@ -40,7 +40,7 @@ interface AppState {
   setSettings(s: Settings): void
   setLicense(l: LicenseStatus): void
   openConversationIn(mode: 'chat' | 'code', id: string | undefined): void
-  usePrompt(p: PendingPrompt | undefined): void
+  applyPrompt(p: PendingPrompt | undefined): void
   showToast(text: string, kind?: 'info' | 'error'): void
 }
 
@@ -113,7 +113,7 @@ export const useApp = create<AppState>((set, get) => ({
     set((s) => ({ openConversation: { ...s.openConversation, [mode]: id }, page: mode }))
   },
 
-  usePrompt(p) {
+  applyPrompt(p) {
     set(p ? { pendingPrompt: p, page: p.page } : { pendingPrompt: undefined })
   },
 

@@ -4,6 +4,7 @@ import { Toast } from './components/Toast'
 import { t } from './i18n'
 import { errorInfo } from './lib/api'
 import { useApp, type Page } from './lib/store'
+import { useIsDark } from './lib/theme'
 import { AudioPage } from './pages/AudioPage'
 import { ChatPage } from './pages/ChatPage'
 import { HistoryPage } from './pages/HistoryPage'
@@ -12,20 +13,6 @@ import { LicenseScreen } from './pages/LicenseScreen'
 import { PromptsPage } from './pages/PromptsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { VideoPage } from './pages/VideoPage'
-
-function useTheme() {
-  const theme = useApp((s) => s.settings?.theme ?? 'system')
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = () => {
-      const dark = theme === 'dark' || (theme === 'system' && mq.matches)
-      document.documentElement.classList.toggle('dark', dark)
-    }
-    apply()
-    mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
-  }, [theme])
-}
 
 const PAGES: Record<Page, () => ReactNode> = {
   chat: () => <ChatPage mode="chat" />,
@@ -47,7 +34,7 @@ export function App() {
   const [error, setError] = useState<string>()
   // Pages stay mounted after first visit so streams and form state survive navigation.
   const [visited, setVisited] = useState<Set<Page>>(new Set())
-  useTheme()
+  useIsDark(true)
 
   useEffect(() => {
     init().catch((err) => setError(errorInfo(err).message))

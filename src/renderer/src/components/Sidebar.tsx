@@ -1,5 +1,6 @@
 import { t } from '../i18n'
 import { useApp, type Page } from '../lib/store'
+import { useIsDark } from '../lib/theme'
 import { Icon, type IconName } from './Icon'
 
 const ITEMS: Array<{ page: Page; icon: IconName }> = [
@@ -15,9 +16,8 @@ const ITEMS: Array<{ page: Page; icon: IconName }> = [
 export function Sidebar() {
   const page = useApp((s) => s.page)
   const navigate = useApp((s) => s.navigate)
-  const settings = useApp((s) => s.settings)
   const updateSettings = useApp((s) => s.updateSettings)
-  const dark = document.documentElement.classList.contains('dark')
+  const dark = useIsDark()
 
   const item = (p: Page, icon: IconName) => (
     <button
@@ -49,11 +49,7 @@ export function Sidebar() {
         <button
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => void updateSettings({ theme: dark ? 'light' : 'dark' })}
-          title={
-            settings?.theme === 'dark' || dark
-              ? t('settings.theme_light')
-              : t('settings.theme_dark')
-          }
+          title={dark ? t('settings.theme_light') : t('settings.theme_dark')}
         >
           <Icon name={dark ? 'sun' : 'moon'} className="h-5 w-5 shrink-0" />
           <span className="hidden lg:inline">
