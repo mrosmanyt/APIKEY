@@ -155,6 +155,7 @@ export const en = {
     reveal: 'Show in folder',
     reapplyPrompt: 'Reuse prompt',
     copiedImage: 'Image copied to clipboard',
+    reusePrompt: 'Reuse prompt',
     revised: 'Revised prompt'
   },
   audio: {

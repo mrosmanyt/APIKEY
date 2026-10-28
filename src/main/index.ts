@@ -9,7 +9,8 @@ import {
   type IpcMainInvokeEvent
 } from 'electron'
 import { APP_NAME } from '@shared/defaults'
-import { registry } from '../providers/registry'
+import { mockAdapter } from '../providers/mock'
+import { ADAPTERS, ProviderRegistry, registry } from '../providers/registry'
 import { registerIpc } from './ipc'
 import { LicenseManager } from './license'
 import { initLogger } from './logger'
@@ -116,7 +117,11 @@ app.whenReady().then(() => {
 
   const ctx: AppContext = {
     storage,
-    registry,
+    // The mock provider exists only in unpackaged development builds.
+    registry:
+      isDev && process.env.AIHUB_MOCK_PROVIDER === '1'
+        ? new ProviderRegistry([...ADAPTERS, mockAdapter])
+        : registry,
     logger,
     // Electron's net.fetch uses Chromium's network stack (system proxy, certificates).
     fetch: (input, init) => net.fetch(input, init as RequestInit),
