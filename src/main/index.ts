@@ -8,9 +8,11 @@ import {
   shell,
   type IpcMainInvokeEvent
 } from 'electron'
-import { APP_NAME } from '@shared/defaults'
+import { APP_NAME, DEFAULT_SETTINGS } from '@shared/defaults'
 import { mockAdapter } from '../providers/mock'
 import { ADAPTERS, ProviderRegistry, registry } from '../providers/registry'
+import { BackgroundManager } from './automation/background'
+import { AutomationService } from './automation/service'
 import { registerIpc } from './ipc'
 import { LicenseManager } from './license'
 import { initLogger } from './logger'
@@ -36,6 +38,9 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let mainWindow: BrowserWindow | null = null
+let background: BackgroundManager | undefined
+/** Automation settings snapshot used by the window close handler. */
+let automationSettings = DEFAULT_SETTINGS.automation
 
 const encryptor: Encryptor = {
   isAvailable: () => safeStorage.isEncryptionAvailable(),
@@ -48,7 +53,16 @@ function isTrustedUrl(url: string): boolean {
   return url.startsWith('file://')
 }
 
-function createWindow(): void {
+function showWindow(): void {
+  if (!mainWindow) createWindow()
+  else {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+}
+
+function createWindow(startHidden = false): void {
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,
@@ -71,7 +85,17 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.once('ready-to-show', () => mainWindow?.show())
+  mainWindow.once('ready-to-show', () => {
+    if (!startHidden) mainWindow?.show()
+  })
+
+  // Automation "run in tray": closing the window hides it; automations keep running.
+  mainWindow.on('close', (event) => {
+    if (background?.keepRunningOnClose(automationSettings)) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+  })
 
   // Never open new windows inside the app; send https links to the system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -96,6 +120,7 @@ function createWindow(): void {
 app.on('second-instance', () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
     mainWindow.focus()
   }
 })
@@ -134,6 +159,25 @@ app.whenReady().then(() => {
   const video = new VideoService(ctx, ai)
   const license = new LicenseManager(path.join(userData, 'license.json'), isDev)
 
+  // Optional Automation module: constructed always, but it only starts anything when enabled.
+  background = new BackgroundManager(() => mainWindow, showWindow)
+  const automation = new AutomationService(
+    ctx,
+    ai,
+    video,
+    {
+      emit: ctx.emit,
+      notify: (title, body) => background?.notify(title, body),
+      windowFocused: () => background?.windowFocused() ?? false
+    },
+    { dataDir: path.join(userData, 'data'), protectedDir: userData }
+  )
+  const applyAutomation = () => {
+    automationSettings = storage.settings.get().automation
+    background?.apply(automationSettings)
+    void automation.apply().catch((err) => logger.error('Automation failed to start', err))
+  }
+
   // Only grant microphone access (for speech-to-text recording); deny everything else.
   session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
     const mediaTypes = (details as { mediaTypes?: string[] }).mediaTypes ?? []
@@ -155,11 +199,17 @@ app.whenReady().then(() => {
     video,
     license,
     logsDir,
+    automation,
+    onSettingsChanged: applyAutomation,
     isTrustedSender: (event: IpcMainInvokeEvent) => isTrustedUrl(event.senderFrame?.url ?? '')
   })
 
   video.resumePending()
-  createWindow()
+  applyAutomation()
+  // Started with Windows by the login item → stay in the tray when automations run there.
+  createWindow(
+    BackgroundManager.startedHidden() && automationSettings.enabled && automationSettings.runInTray
+  )
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -167,7 +217,10 @@ app.whenReady().then(() => {
 
   process.on('uncaughtException', (err) => logger.error('Uncaught exception', err))
   process.on('unhandledRejection', (err) => logger.error('Unhandled rejection', err))
-  app.on('before-quit', () => video.stopAll())
+  app.on('before-quit', () => {
+    video.stopAll()
+    void automation.shutdown()
+  })
 })
 
 app.on('window-all-closed', () => {

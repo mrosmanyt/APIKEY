@@ -1,4 +1,5 @@
 import { DEFAULT_PRICES } from './pricing'
+import { DEFAULT_AUTOMATION_SETTINGS } from './automation'
 import type { Settings } from './types'
 
 export const APP_NAME = 'AI Hub'
@@ -13,7 +14,8 @@ export const DEFAULT_SETTINGS: Settings = {
   modelCache: {},
   voiceCache: {},
   prices: DEFAULT_PRICES,
-  onboardingCompleted: false
+  onboardingCompleted: false,
+  automation: DEFAULT_AUTOMATION_SETTINGS
 }
 
 export const CODE_SYSTEM_PROMPT = `You are an expert software engineer and pair programmer.

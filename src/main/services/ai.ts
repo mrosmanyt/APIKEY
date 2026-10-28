@@ -262,6 +262,27 @@ export class AiService {
     return text
   }
 
+  /** Non-streaming chat completion (used by automation). Records usage like a chat request. */
+  async completeChat(
+    req: ChatRequest,
+    signal?: AbortSignal
+  ): Promise<{ text: string; usage?: TokenUsage }> {
+    let text = ''
+    try {
+      const a = this.adapter(req.providerId, 'chat')
+      const result = await a.chat!.stream(this.providerContext(req.providerId, signal), req, {
+        onDelta: (t) => (text += t)
+      })
+      this.app.storage.usage.record(req.providerId, 'chat', { usage: result.usage })
+      return { text, usage: result.usage }
+    } catch (err) {
+      const info = this.toError(err, req.providerId, 'automation chat')
+      if (info.kind !== 'cancelled')
+        this.app.storage.usage.record(req.providerId, 'chat', { error: true })
+      throw new ProviderError({ ...info })
+    }
+  }
+
   stopChat(requestId: string): void {
     this.activeChats.get(requestId)?.abort()
   }

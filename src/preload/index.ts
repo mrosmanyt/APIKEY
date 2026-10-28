@@ -3,13 +3,14 @@
  * (`window.aihub`). The renderer gets no access to ipcRenderer, Node or Electron.
  */
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AiHubApi, InvokeChannel } from './api-types'
+import type { AiHubApi, EVENT_CHANNELS, InvokeChannel } from './api-types'
+import type { BatchJob, WorkflowRun } from '../shared/automation'
 import type { ChatStreamEvent, VideoJob } from '../shared/types'
 
 const invoke = (channel: InvokeChannel, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args)
 
 function subscribe<T>(
-  channel: 'chat:event' | 'video:update',
+  channel: (typeof EVENT_CHANNELS)[number],
   cb: (payload: T) => void
 ): () => void {
   const listener = (_e: IpcRendererEvent, payload: T) => cb(payload)
@@ -102,6 +103,37 @@ const api: AiHubApi = {
     list: () => invoke('prompts:list'),
     save: (p) => invoke('prompts:save', p),
     delete: (id) => invoke('prompts:delete', id)
+  },
+  automation: {
+    status: () => invoke('automation:status'),
+    listWorkflows: () => invoke('automation:listWorkflows'),
+    saveWorkflow: (w) => invoke('automation:saveWorkflow', w),
+    deleteWorkflow: (id) => invoke('automation:deleteWorkflow', id),
+    templates: () => invoke('automation:templates'),
+    createFromTemplate: (id, defaults) => invoke('automation:createFromTemplate', id, defaults),
+    preflight: (id) => invoke('automation:preflight', id),
+    approve: (id, approvals) => invoke('automation:approve', id, approvals),
+    revoke: (id, kind, target) => invoke('automation:revoke', id, kind, target),
+    run: (id, input) => invoke('automation:run', id, input ?? null),
+    cancelRun: (id) => invoke('automation:cancelRun', id),
+    listRuns: (id) => invoke('automation:listRuns', id ?? null),
+    clearRuns: () => invoke('automation:clearRuns'),
+    retryRun: (id) => invoke('automation:retryRun', id),
+    approveRun: (id) => invoke('automation:approveRun', id),
+    listBatches: () => invoke('automation:listBatches'),
+    startBatch: (opts) => invoke('automation:startBatch', opts),
+    pauseBatch: (id) => invoke('automation:pauseBatch', id),
+    resumeBatch: (id) => invoke('automation:resumeBatch', id),
+    cancelBatch: (id) => invoke('automation:cancelBatch', id),
+    deleteBatch: (id) => invoke('automation:deleteBatch', id),
+    export: (ids) => invoke('automation:export', ids),
+    import: () => invoke('automation:import'),
+    webhookInfo: () => invoke('automation:webhookInfo'),
+    regenerateToken: () => invoke('automation:regenerateToken'),
+    pickPath: (kind, extensions) => invoke('automation:pickPath', kind, extensions ?? null),
+    onRun: (cb) => subscribe<WorkflowRun>('automation:run', cb),
+    onBatch: (cb) => subscribe<BatchJob>('automation:batch', cb),
+    onChanged: (cb) => subscribe<null>('automation:changed', () => cb())
   },
   backup: {
     export: (includeKeys, passphrase) => invoke('backup:export', { includeKeys, passphrase }),

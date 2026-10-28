@@ -24,6 +24,8 @@ import type {
 } from '@shared/types'
 import type { InvokeChannel } from '../preload/api-types'
 import { ProviderError } from '../providers/errors'
+import type { AutomationService } from './automation/service'
+import { registerAutomationIpc } from './ipc-automation'
 import type { LicenseManager } from './license'
 import { conversationToJson, conversationToMarkdown } from './storage/conversations'
 import {
@@ -61,6 +63,9 @@ export interface IpcDeps {
   video: VideoService
   license: LicenseManager
   logsDir: string
+  automation: AutomationService
+  /** Called after settings change (starts/stops Automation, tray, login item). */
+  onSettingsChanged: () => void
   isTrustedSender: (event: IpcMainInvokeEvent) => boolean
 }
 
@@ -328,9 +333,11 @@ export function registerIpc(deps: IpcDeps): void {
 
   // ----------------------------------------------------------- settings
   handle('settings:get', none, () => storage.settings.get())
-  handle('settings:update', one(zSettingsPatch), (patch) =>
-    storage.settings.update(patch as Partial<Settings>)
-  )
+  handle('settings:update', one(zSettingsPatch), (patch) => {
+    const next = storage.settings.update(patch as Partial<Settings>)
+    if (patch.automation) deps.onSettingsChanged()
+    return next
+  })
   handle('settings:chooseOutputDir', none, async () => {
     const res = await dialog.showOpenDialog(win(), {
       properties: ['openDirectory', 'createDirectory'],
@@ -421,6 +428,7 @@ export function registerIpc(deps: IpcDeps): void {
         // On a wrong passphrase this throws before anything is written; the pending file is
         // kept so the user can try again.
         const result = restoreBackup(storage, pendingImport.backup, opts)
+        deps.onSettingsChanged()
         pendingImport = undefined
         ctx.logger.info('Backup restored', result)
         return result
@@ -429,4 +437,6 @@ export function registerIpc(deps: IpcDeps): void {
   handle('backup:cancelImport', none, () => {
     pendingImport = undefined
   })
+
+  registerAutomationIpc(handle, deps.automation)
 }

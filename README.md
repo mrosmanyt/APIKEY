@@ -39,6 +39,9 @@ speech-to-text and coding — from one clean interface.
 - **Cost estimates** — per message and per month, from an editable price table.
 - **Image tools** — reference images (image-to-image), upscale, variations.
 - **Prompt enhancer**, **setup wizard**, **Urdu UI (RTL)** and **keyboard shortcuts**.
+- **Automation** (optional, off by default) — workflows of AI, file and HTTP steps with
+  manual, scheduled, folder-watch and local-webhook triggers, CSV/TXT/folder batches, run
+  history with retry, approvals, spending caps, tray mode and JSON workflow packs.
 - **Prompt library**, per-mode defaults, usage statistics, backup/restore, logs, dark/light theme,
   i18n-ready strings.
 - Friendly errors for invalid key, no quota, rate limits (auto retry with backoff), offline,
@@ -224,7 +227,9 @@ See [DECISIONS.md](DECISIONS.md) for details. In short: keys encrypted with DPAP
 only in the main process; `contextIsolation`, `sandbox`, no `nodeIntegration`; a strict
 preload API; zod validation on every IPC call; CSP; navigation blocked; secret redaction in
 logs and errors; backups only contain API keys encrypted with a user passphrase
-(scrypt + AES-256-GCM).
+(scrypt + AES-256-GCM). Automation workflows never contain keys; their file writes outside the
+output folder and calls to external hosts need the user's approval, and the optional webhook
+listens on 127.0.0.1 with a random token.
 
 ## Documentation
 

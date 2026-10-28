@@ -144,6 +144,38 @@ All UI strings live in `src/renderer/src/i18n/en.ts` with a typed `t('section.ke
   without a valid key ("— add key in Settings") so users discover what is available.
 - First launch with no keys opens Settings › API Keys directly.
 
+## Automation
+
+- **Opt-in module.** `settings.automation.enabled` defaults to false. `AutomationService.apply()`
+  starts schedules, folder watchers and the webhook only when it is on, and `stopAll()` tears
+  them down (aborting running runs and pausing batches) when it is turned off. Every
+  `automation:*` IPC channel except `status` refuses to work while it is off, and the renderer
+  unmounts the screen.
+- **Engine in the main process.** Workflows are data (zod-validated); the engine calls the same
+  `AiService`/`VideoService` code the screens use, so keys stay in the main process. Step inputs
+  and outputs stored in run history are redacted with `shared/redact.ts`, truncated, and header
+  values with secret-looking names are stored as `[hidden]`.
+- **Approvals, not sandboxes.** A workflow may write inside the output folder freely; anything
+  else needs a per-folder approval stored on that workflow. External HTTP hosts need a per-host
+  approval (loopback is allowed; URLs with credentials are rejected). The app data folder (keys,
+  license, stores) can never be read or written. Approvals are known up front where paths/URLs
+  are literal (preflight before a manual run); otherwise the run stops with "Needs approval"
+  and can be approved and retried. The editor's save cannot add approvals — only the approve
+  call can — and imports/exports drop them.
+- **Cost estimates for caps** use token counts × per-1M prices and flat per-item prices from
+  Settings › Automation. They are deliberately simple and labelled as estimates.
+- **Scheduling** uses a small built-in 5-field cron parser (day-of-month/day-of-week OR
+  semantics like Vixie cron) instead of a dependency; timers are re-armed in ≤ 24 h chunks so
+  sleep/clock changes don't cause drift beyond one chunk.
+- **Folder watch** polls (with `fs.watch` as a hint to scan sooner) because `fs.watch` alone is
+  unreliable on network drives, and reports a file only once its size is stable, so half-copied
+  files are not processed.
+- **Webhook** binds to 127.0.0.1 only, uses a 24-byte random token compared in constant time,
+  limits bodies to 1 MB and is off unless enabled.
+- **Background.** Tray mode keeps the app alive when the window is closed; "Start with Windows"
+  registers a login item with `--hidden` (packaged builds only) and is only offered when tray
+  mode is on.
+
 ## Development helpers
 
 - A **mock provider** (`src/providers/mock`) with every capability can be enabled with

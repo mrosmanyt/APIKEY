@@ -41,7 +41,11 @@ const PATHS: Record<string, string> = {
   expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
   layers: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
   keyboard: 'M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8',
-  globe: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20'
+  globe: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20',
+  automation: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  pause: 'M6 4h4v16H6zM14 4h4v16h-4z',
+  chevronUp: 'M18 15l-6-6-6 6',
+  chevronDown: 'M6 9l6 6 6-6'
 }
 
 export type IconName = keyof typeof PATHS
