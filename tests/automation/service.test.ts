@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { realPath } from '../../src/main/automation/safety'
 import { AutomationService } from '../../src/main/automation/service'
 import { FolderWatcher, listMatchingFiles, patternMatcher } from '../../src/main/automation/watcher'
 import { tokenMatches, WebhookServer } from '../../src/main/automation/webhook'
@@ -179,16 +180,16 @@ describe('AutomationService', () => {
         { id: 'step2', type: 'writeFile', path: outside, content: '{{step1.output}}' }
       ])
     )
-    expect(automation.preflight('wf_1')).toEqual([{ kind: 'write', target: path.dirname(outside) }])
+    // Approvals name the real folder (on Windows, temp paths can be 8.3 short names).
+    const realFolder = realPath(path.dirname(outside))
+    expect(automation.preflight('wf_1')).toEqual([{ kind: 'write', target: realFolder }])
     const first = await done(automation, automation.runManually('wf_1'))
     expect(first.status).toBe('needs_approval')
     const retried = await done(automation, automation.approveRun(first.id))
     expect(retried.status).toBe('success')
     expect(retried.steps.map((s) => s.stepId)).toEqual(['step2'])
     expect(fs.readFileSync(outside, 'utf8')).toBe('echo:x')
-    expect(automation.workflows.get('wf_1')!.permissions.writeFolders).toEqual([
-      path.dirname(outside)
-    ])
+    expect(automation.workflows.get('wf_1')!.permissions.writeFolders).toEqual([realFolder])
     // Saving from the editor cannot grant or keep-alive approvals it did not get from approve().
     const saved = automation.saveWorkflow({
       ...automation.workflows.get('wf_1')!,
