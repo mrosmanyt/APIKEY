@@ -3,12 +3,18 @@ import { PageHeader } from '../components/PageHeader'
 import { t, type TranslationKey } from '../i18n'
 import { useApp } from '../lib/store'
 import { AboutTab } from './settings/AboutTab'
+import { BackupTab } from './settings/BackupTab'
+import { DefaultsTab } from './settings/DefaultsTab'
 import { GeneralTab } from './settings/GeneralTab'
 import { KeysTab } from './settings/KeysTab'
+import { UsageTab } from './settings/UsageTab'
 
 const TABS: Array<{ id: string; label: TranslationKey; render: () => ReactNode }> = [
   { id: 'keys', label: 'settings.tabKeys', render: () => <KeysTab /> },
+  { id: 'defaults', label: 'settings.tabDefaults', render: () => <DefaultsTab /> },
   { id: 'general', label: 'settings.tabGeneral', render: () => <GeneralTab /> },
+  { id: 'usage', label: 'settings.tabUsage', render: () => <UsageTab /> },
+  { id: 'backup', label: 'settings.tabBackup', render: () => <BackupTab /> },
   { id: 'about', label: 'settings.tabAbout', render: () => <AboutTab /> }
 ]
 

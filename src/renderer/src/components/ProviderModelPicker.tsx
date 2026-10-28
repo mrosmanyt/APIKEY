@@ -80,6 +80,7 @@ export function ProviderModelPicker({
             })
           }}
         >
+          {!value && <option value="">{t('common.none')}</option>}
           {candidates.map((p) => {
             const ok = usable.some((u) => u.id === p.id)
             return (
@@ -90,62 +91,64 @@ export function ProviderModelPicker({
           })}
         </select>
       </div>
-      <div className={compact ? 'w-56' : 'min-w-[12rem] flex-[2]'}>
-        {!compact && <label className="label">{t('common.model')}</label>}
-        <div className="flex gap-1">
-          {customMode || (!isKnownModel && value?.model) ? (
-            <input
-              className="input"
-              aria-label={t('common.model')}
-              placeholder={t('common.enterModelId')}
-              value={value?.model ?? ''}
-              onChange={(e) => value && onChange({ ...value, model: e.target.value })}
-              onBlur={() => !value?.model && setCustomMode(false)}
-            />
-          ) : (
-            <select
-              className="input"
-              aria-label={t('common.model')}
-              value={value?.model ?? ''}
-              onChange={(e) => {
-                if (e.target.value === CUSTOM) {
-                  setCustomMode(true)
-                  if (value) onChange({ ...value, model: '' })
-                } else if (value) onChange({ ...value, model: e.target.value })
-              }}
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name && m.name !== m.id ? `${m.name} (${m.id})` : m.id}
-                </option>
-              ))}
-              <option value={CUSTOM}>{t('common.customModel')}</option>
-            </select>
-          )}
-          {customMode && (
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                setCustomMode(false)
-                if (value) onChange({ ...value, model: models[0]?.id ?? '' })
-              }}
-              title={t('common.cancel')}
-            >
-              <Icon name="x" />
-            </button>
-          )}
-          {provider?.canListModels && (
-            <button
-              className="btn-ghost"
-              onClick={refresh}
-              disabled={refreshing}
-              title={t('common.refreshModels')}
-            >
-              <Icon name="refresh" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+      {value && (
+        <div className={compact ? 'w-56' : 'min-w-[12rem] flex-[2]'}>
+          {!compact && <label className="label">{t('common.model')}</label>}
+          <div className="flex gap-1">
+            {customMode || (!isKnownModel && value?.model) ? (
+              <input
+                className="input"
+                aria-label={t('common.model')}
+                placeholder={t('common.enterModelId')}
+                value={value?.model ?? ''}
+                onChange={(e) => value && onChange({ ...value, model: e.target.value })}
+                onBlur={() => !value?.model && setCustomMode(false)}
+              />
+            ) : (
+              <select
+                className="input"
+                aria-label={t('common.model')}
+                value={value?.model ?? ''}
+                onChange={(e) => {
+                  if (e.target.value === CUSTOM) {
+                    setCustomMode(true)
+                    if (value) onChange({ ...value, model: '' })
+                  } else if (value) onChange({ ...value, model: e.target.value })
+                }}
+              >
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name && m.name !== m.id ? `${m.name} (${m.id})` : m.id}
+                  </option>
+                ))}
+                <option value={CUSTOM}>{t('common.customModel')}</option>
+              </select>
+            )}
+            {customMode && (
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  setCustomMode(false)
+                  if (value) onChange({ ...value, model: models[0]?.id ?? '' })
+                }}
+                title={t('common.cancel')}
+              >
+                <Icon name="x" />
+              </button>
+            )}
+            {provider?.canListModels && (
+              <button
+                className="btn-ghost"
+                onClick={refresh}
+                disabled={refreshing}
+                title={t('common.refreshModels')}
+              >
+                <Icon name="refresh" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

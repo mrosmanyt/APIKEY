@@ -51,7 +51,8 @@ export const en = {
     modelsRefreshed: 'Loaded {count} models',
     customModel: 'Custom model id…',
     enterModelId: 'Enter a model id',
-    unknownError: 'Something went wrong'
+    unknownError: 'Something went wrong',
+    offline: 'You are offline. AI providers cannot be reached until your connection is back.'
   },
   providerPicker: {
     noProviders: 'No provider with a valid key supports this yet.',

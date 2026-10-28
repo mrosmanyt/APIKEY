@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { OfflineBanner } from './components/OfflineBanner'
 import { Sidebar } from './components/Sidebar'
 import { Toast } from './components/Toast'
 import { t } from './i18n'
@@ -60,15 +62,18 @@ export function App() {
     )
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <Sidebar />
-      <main className="relative min-w-0 flex-1">
-        {[...visited].map((p) => (
-          <div key={p} className={`absolute inset-0 flex-col ${p === page ? 'flex' : 'hidden'}`}>
-            {PAGES[p]()}
-          </div>
-        ))}
-      </main>
+    <div className="flex h-full flex-col overflow-hidden">
+      <OfflineBanner />
+      <div className="flex min-h-0 flex-1">
+        <Sidebar />
+        <main className="relative min-w-0 flex-1">
+          {[...visited].map((p) => (
+            <div key={p} className={`absolute inset-0 flex-col ${p === page ? 'flex' : 'hidden'}`}>
+              <ErrorBoundary>{PAGES[p]()}</ErrorBoundary>
+            </div>
+          ))}
+        </main>
+      </div>
       <Toast />
     </div>
   )
